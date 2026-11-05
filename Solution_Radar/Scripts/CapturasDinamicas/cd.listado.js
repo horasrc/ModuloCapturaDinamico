@@ -1,0 +1,118 @@
+﻿/* =====================================================================
+   MÓDULO CAPTURA DINÁMICA - Listado de encuestas (cd.listado.js)
+   Controla la vista Administrador.cshtml (parcial _ListadoEncuestas).
+   ===================================================================== */
+
+(function (CD) {
+    'use strict';
+
+    var util = CD.util;
+    var ui = CD.ui;
+    var $ = jQuery;
+    var encuestas = [];
+    var filtro = { texto: '', estatus: '' };
+
+    function init() {
+        enlazarEventos();
+        cargar();
+    }
+
+    function cargar() {
+        ui.cargando($('#cdTablaEncuestas'), 'Cargando encuestas...');
+        CD.api.listarEncuestas()
+            .done(function (lista) {
+                encuestas = lista || [];
+                render();
+            })
+            .fail(function (msg) {
+                $('#cdTablaEncuestas').html('<div class="p-3 text-cd-red">' + util.esc(msg) + '</div>');
+            });
+    }
+
+    function urlEditor(id, hash) {
+        return CD.config.urls.editor + '/' + id + (hash ? '#' + hash : '');
+    }
+
+    function render() {
+        var filas = '';
+        var visibles = 0;
+        var conteo = { '': encuestas.length, Borrador: 0, Publicada: 0, Cerrada: 0, Archivada: 0 };
+
+        for (var i = 0; i < encuestas.length; i++) {
+            var e = encuestas[i];
+            conteo[e.Estatus] = (conteo[e.Estatus] || 0) + 1;
+            if (filtro.estatus && e.Estatus !== filtro.estatus) { continue; }
+            if (filtro.texto && e.Nombre.toLowerCase().indexOf(filtro.texto) < 0) { continue; }
+            visibles++;
+
+            var version = 'v' + e.NumeroVersionVigente;
+            if (e.NumeroVersionUltima !== e.NumeroVersionVigente) {
+                version += ' <span class="cd-badge cd-badge-Borrador ms-1">v' + e.NumeroVersionUltima + ' ' + e.EstatusUltimaVersion.toLowerCase() + '</span>';
+            }
+
+            filas += '<tr>' +
+                '<td><a class="cd-nombre" href="' + urlEditor(e.IdEncuesta) + '">' + util.esc(e.Nombre) + '</a>' +
+                (e.Descripcion ? '<div class="small text-cd-muted">' + util.esc(e.Descripcion) + '</div>' : '') + '</td>' +
+                '<td>' + ui.badgeEstatus(e.Estatus) + '</td>' +
+                '<td class="text-nowrap">' + version + '</td>' +
+                '<td class="text-center">' + e.TotalPreguntas + '</td>' +
+                '<td class="text-center">' + e.TotalRespuestas + '</td>' +
+                '<td class="small text-nowrap">' + (e.FechaInicio ? util.fecha(e.FechaInicio) + ' – ' + util.fecha(e.FechaCierre) : '—') + '</td>' +
+                '<td class="small text-cd-muted">' + util.fecha(e.FechaModificacion) + '<br>' + util.esc(e.UsuarioModifica) + '</td>' +
+                '<td class="text-end text-nowrap">' +
+                '<a class="btn btn-sm btn-cd-borde me-1" href="' + urlEditor(e.IdEncuesta) + '" title="Editar"><i class="bi bi-pencil"></i></a>' +
+                '<a class="btn btn-sm btn-cd-borde me-1" href="' + urlEditor(e.IdEncuesta, 'resultados') + '" title="Resultados"><i class="bi bi-bar-chart"></i></a>' +
+                (e.Estatus === 'Publicada' ? '<a class="btn btn-sm btn-cd-borde" href="' + CD.config.urls.captura + '/' + e.IdEncuesta + '" target="_blank" title="Abrir captura"><i class="bi bi-box-arrow-up-right"></i></a>' : '') +
+                '</td></tr>';
+        }
+
+        $('[data-cd-filtro]').each(function () {
+            var est = $(this).attr('data-cd-filtro');
+            $(this).toggleClass('activo', est === filtro.estatus);
+            $(this).find('.cd-contador').text(conteo[est] || 0);
+        });
+
+        if (!visibles) {
+            $('#cdTablaEncuestas').html('<div class="cd-vacio"><i class="bi bi-inbox"></i>No hay encuestas que coincidan.</div>');
+            return;
+        }
+
+        $('#cdTablaEncuestas').html('<div class="table-responsive"><table class="table cd-tabla-encuestas align-middle">' +
+            '<thead><tr><th>Encuesta</th><th>Estatus</th><th>Versión</th><th class="text-center">Preguntas</th><th class="text-center">Respuestas</th>' +
+            '<th>Vigencia</th><th>Última modificación</th><th></th></tr></thead><tbody>' + filas + '</tbody></table></div>');
+    }
+
+    function crear() {
+        var nombre = $.trim($('#cdNuevaNombre').val());
+        if (!nombre) { ui.toast('Escribe el nombre de la encuesta.', 'error'); return; }
+        $('#cdBtnCrearEncuesta').prop('disabled', true);
+        CD.api.crearEncuesta(nombre, $.trim($('#cdNuevaDescripcion').val()))
+            .done(function (e) {
+                window.location.href = urlEditor(e.IdEncuesta);
+            })
+            .fail(function (msg) { ui.toast(msg, 'error'); })
+            .always(function () { $('#cdBtnCrearEncuesta').prop('disabled', false); });
+    }
+
+    function enlazarEventos() {
+        var $d = $(document);
+        $d.on('input', '#cdBuscarEncuesta', function () {
+            filtro.texto = this.value.toLowerCase();
+            render();
+        });
+        $d.on('click', '[data-cd-filtro]', function () {
+            filtro.estatus = $(this).attr('data-cd-filtro');
+            render();
+        });
+        $d.on('click', '#cdBtnNuevaEncuesta', function () {
+            $('#cdNuevaNombre, #cdNuevaDescripcion').val('');
+            ui.modal('cdModalNuevaEncuesta', 'show');
+            setTimeout(function () { $('#cdNuevaNombre').trigger('focus'); }, 300);
+        });
+        $d.on('click', '#cdBtnCrearEncuesta', crear);
+        $d.on('keydown', '#cdNuevaNombre', function (e) { if (e.which === 13) { crear(); } });
+    }
+
+    CD.Listado = { init: init, recargar: cargar };
+
+})(window.CD);

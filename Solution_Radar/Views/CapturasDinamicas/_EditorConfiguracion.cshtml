@@ -1,0 +1,97 @@
+﻿@* 10. PUBLICACIÓN y 11. SEGMENTACIÓN *@
+<div class="row g-3">
+    <div class="col-12 col-xl-7">
+        <div class="cd-card">
+            <div class="cd-card-header"><span><i class="bi bi-send me-2"></i>Publicación</span></div>
+            <div class="cd-card-body">
+                <div class="row g-3">
+                    <div class="col-md-6">
+                        <label class="cd-label" for="cdCfgFechaInicio">Fecha de inicio</label>
+                        <input type="date" class="form-control" id="cdCfgFechaInicio" />
+                    </div>
+                    <div class="col-md-6">
+                        <label class="cd-label" for="cdCfgFechaCierre">Fecha de cierre</label>
+                        <input type="date" class="form-control" id="cdCfgFechaCierre" />
+                    </div>
+
+                    <div class="col-12">
+                        <label class="cd-label">Respuestas por usuario</label>
+                        <div class="d-flex cd-dispositivos">
+                            <button type="button" class="btn flex-fill rounded-0 rounded-start" data-cd-respuestas="1"><i class="bi bi-person-check me-1"></i>Una respuesta</button>
+                            <button type="button" class="btn flex-fill rounded-0 rounded-end" data-cd-respuestas="0"><i class="bi bi-people me-1"></i>Múltiples respuestas</button>
+                        </div>
+                    </div>
+
+                    <div class="col-md-6">
+                        <div class="border rounded p-3 h-100">
+                            <div class="form-check form-switch mb-1">
+                                <input class="form-check-input" type="checkbox" role="switch" id="cdCfgAnonima" />
+                                <label class="form-check-label fw-semibold" for="cdCfgAnonima">Encuesta anónima</label>
+                            </div>
+                            <div class="small text-cd-muted">Los resultados no muestran quién respondió.</div>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="border rounded p-3 h-100">
+                            <div class="form-check form-switch mb-1">
+                                <input class="form-check-input" type="checkbox" role="switch" id="cdCfgAutenticado" />
+                                <label class="form-check-label fw-semibold" for="cdCfgAutenticado">Requiere usuario autenticado</label>
+                            </div>
+                            <div class="small text-cd-muted">Necesario para controlar una respuesta por usuario.</div>
+                        </div>
+                    </div>
+
+                    <div class="col-12">
+                        <label class="cd-label" for="cdCfgMensajeInicial">Mensaje inicial</label>
+                        <textarea class="form-control" id="cdCfgMensajeInicial" rows="2" maxlength="500" placeholder="Se muestra arriba de la encuesta"></textarea>
+                    </div>
+                    <div class="col-12">
+                        <label class="cd-label" for="cdCfgMensajeFinal">Mensaje final</label>
+                        <textarea class="form-control" id="cdCfgMensajeFinal" rows="2" maxlength="500" placeholder="Se muestra al enviar las respuestas"></textarea>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-12 col-xl-5">
+        <div class="cd-card">
+            <div class="cd-card-header"><span><i class="bi bi-people me-2"></i>Segmentación: ¿quién puede responder?</span></div>
+            <div class="cd-card-body">
+                <div id="cdSegLista"></div>
+                <div class="row g-2 mt-1">
+                    <div class="col-sm-5">
+                        <select class="form-select" id="cdSegTipo">
+                            <option value="Puesto">Puesto</option>
+                            <option value="Segmento">Segmento</option>
+                            <option value="Region">Región</option>
+                            <option value="Sucursal">Sucursal</option>
+                            <option value="Usuario">Usuario específico</option>
+                        </select>
+                    </div>
+                    <div class="col-sm-7">
+                        <div class="input-group">
+                            <input type="text" class="form-control" id="cdSegValor" list="cdSegSugerencias" maxlength="100" />
+                            <button type="button" class="btn btn-cd-borde" id="cdSegAgregar"><i class="bi bi-plus-lg"></i></button>
+                        </div>
+                        <datalist id="cdSegSugerencias"></datalist>
+                    </div>
+                </div>
+                <div class="small text-cd-muted mt-2">Ejemplos: Ejecutivos, Gerentes, Segmento Premier, Región Centro, Sucursal 0123 o un número de empleado.</div>
+
+                <hr />
+                <label class="cd-label" for="cdCfgPoblacion">Población objetivo <span class="opcional">(para calcular la tasa de respuesta)</span></label>
+                <input type="number" class="form-control" id="cdCfgPoblacion" min="0" style="max-width:200px" />
+                <div class="small text-cd-muted mt-1">Cuando se conecte la base de datos este número se calculará con la segmentación.</div>
+            </div>
+        </div>
+
+        <div class="cd-card">
+            <div class="cd-card-header"><span><i class="bi bi-card-text me-2"></i>Datos generales</span></div>
+            <div class="cd-card-body">
+                <label class="cd-label" for="cdCfgDescripcion">Descripción interna</label>
+                <textarea class="form-control" id="cdCfgDescripcion" rows="2" maxlength="300"></textarea>
+            </div>
+        </div>
+    </div>
+</div>

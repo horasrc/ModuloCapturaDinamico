@@ -1,0 +1,23 @@
+# Compilación de Visual Studio / MSBuild
+bin/
+obj/
+.vs/
+*.user
+*.suo
+packages/
+*.log
+
+# IIS Express
+.vs/config/
+
+# Capturas de pantalla de referencia: contienen datos internos y personales
+# (Token con nombres/correos reales, URLs internas). No se suben al repositorio.
+Img/
+
+# Copias del módulo dentro del proyecto de prueba (las genera Sincronizar.ps1 desde Solution_Radar/)
+ProyectoPrueba/Solution_Radar/Controllers/CapturasDinamicasController.cs
+ProyectoPrueba/Solution_Radar/Models/ModuloDinamico/
+ProyectoPrueba/Solution_Radar/DataAccess/
+ProyectoPrueba/Solution_Radar/Views/CapturasDinamicas/
+ProyectoPrueba/Solution_Radar/CSS/
+ProyectoPrueba/Solution_Radar/Scripts/

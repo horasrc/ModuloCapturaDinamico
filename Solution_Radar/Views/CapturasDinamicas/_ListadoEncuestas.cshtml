@@ -1,0 +1,73 @@
+﻿@*
+    Vista parcial: listado de encuestas (administrador).
+    Incluye su CSS y sus scripts para poder usarse sola.
+*@
+<link href="@Url.Content("~/CSS/Page2026/CapturasDinamicas/CapturasDinamicas.css")?v=1.0.0" rel="stylesheet" />
+
+<div class="cd-modulo" id="cdListado">
+
+    <!-- ENCABEZADO -->
+    <div class="cd-encabezado pb-3">
+        <div class="d-flex flex-wrap justify-content-between align-items-center gap-2">
+            <div>
+                <h1 class="cd-titulo">Captura dinámica</h1>
+                <div class="small text-cd-muted">Encuestas y formularios configurables sin programar</div>
+            </div>
+            <button type="button" class="btn btn-cd-rojo" id="cdBtnNuevaEncuesta">
+                <i class="bi bi-plus-lg me-1"></i>Nueva encuesta
+            </button>
+        </div>
+    </div>
+
+    <!-- FILTROS + TABLA -->
+    <div class="cd-card">
+        <div class="cd-card-header flex-wrap gap-2">
+            <div class="cd-filtros d-flex flex-wrap gap-1">
+                <button type="button" class="btn btn-sm activo" data-cd-filtro="">Todas <span class="cd-contador">0</span></button>
+                <button type="button" class="btn btn-sm" data-cd-filtro="Publicada">Publicadas <span class="cd-contador">0</span></button>
+                <button type="button" class="btn btn-sm" data-cd-filtro="Borrador">Borradores <span class="cd-contador">0</span></button>
+                <button type="button" class="btn btn-sm" data-cd-filtro="Cerrada">Cerradas <span class="cd-contador">0</span></button>
+                <button type="button" class="btn btn-sm" data-cd-filtro="Archivada">Archivadas <span class="cd-contador">0</span></button>
+            </div>
+            <div class="input-group input-group-sm" style="max-width:300px">
+                <span class="input-group-text bg-white"><i class="bi bi-search"></i></span>
+                <input type="text" class="form-control" id="cdBuscarEncuesta" placeholder="Buscar encuesta" />
+            </div>
+        </div>
+        <div id="cdTablaEncuestas"></div>
+    </div>
+
+    <!-- MODAL: NUEVA ENCUESTA -->
+    <div class="modal fade" id="cdModalNuevaEncuesta" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title"><i class="bi bi-ui-checks me-2"></i>Nueva encuesta</h5>
+                    <button type="button" class="btn-close" data-cd-cerrar-modal="1" aria-label="Cerrar"></button>
+                </div>
+                <div class="modal-body">
+                    <label class="cd-label" for="cdNuevaNombre">Nombre</label>
+                    <input type="text" class="form-control mb-3" id="cdNuevaNombre" maxlength="150" placeholder="Ej. Experiencia con campañas comerciales" />
+                    <label class="cd-label" for="cdNuevaDescripcion">Descripción <span class="opcional">(opcional)</span></label>
+                    <textarea class="form-control" id="cdNuevaDescripcion" rows="2" maxlength="300"></textarea>
+                    <div class="small text-cd-muted mt-2">Se creará la versión 1 en borrador.</div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-cd-borde" data-cd-cerrar-modal="1">Cancelar</button>
+                    <button type="button" class="btn btn-cd-rojo" id="cdBtnCrearEncuesta">Crear y editar</button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script src="@Url.Content("~/Scripts/CapturasDinamicas/cd.core.js")?v=1.0.0"></script>
+<script src="@Url.Content("~/Scripts/CapturasDinamicas/cd.api.js")?v=1.0.0"></script>
+<script src="@Url.Content("~/Scripts/CapturasDinamicas/cd.listado.js")?v=1.0.0"></script>
+<script>
+    CD.config.urls.listarEncuestas = '@Url.Action("ListarEncuestas", "CapturasDinamicas")';
+    CD.config.urls.crearEncuesta = '@Url.Action("CrearEncuesta", "CapturasDinamicas")';
+    CD.config.urls.editor = '@Url.Action("Editor", "CapturasDinamicas", new { id = "" })';
+    CD.config.urls.captura = '@Url.Action("Captura", "CapturasDinamicas", new { id = "" })';
+    jQuery(function () { CD.Listado.init(); });
+</script>

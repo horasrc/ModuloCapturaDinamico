@@ -1,0 +1,14 @@
+﻿@*
+    =====================================================================
+    MÓDULO CAPTURA DINÁMICA - Pantalla de captura (usuario final)
+    URL: /CapturasDinamicas/Captura/{id}
+    El contenido vive en la parcial _CapturaFormulario para poder
+    incrustarla en otra pantalla:  @Html.Action("CapturaParcial", "CapturasDinamicas", new { id = 1 })
+    =====================================================================
+*@
+@{
+    ViewBag.Title = "Encuesta";
+    Layout = "~/Views/Shared/_LayoutRadar2026.cshtml";
+}
+
+@Html.Partial("_CapturaFormulario")

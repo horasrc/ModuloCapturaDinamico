@@ -1,0 +1,70 @@
+﻿@*
+    Modales y offcanvas del editor.
+    Se abren/cierran con CD.ui.modal / CD.ui.offcanvas (API de Bootstrap),
+    sin data-bs-toggle ni data-bs-dismiss.
+*@
+
+<!-- MODAL: tipos de pregunta (al dar "+ Agregar pregunta") -->
+<div class="modal fade" id="cdModalTipos" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">¿Qué tipo de pregunta quieres agregar?</h5>
+                <button type="button" class="btn-close" data-cd-cerrar-modal="1" aria-label="Cerrar"></button>
+            </div>
+            <div class="modal-body">
+                <div class="cd-tipos-grid" id="cdModalTiposGrid"></div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- MODAL: nombre de la encuesta -->
+<div class="modal fade" id="cdModalNombre" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Nombre de la encuesta</h5>
+                <button type="button" class="btn-close" data-cd-cerrar-modal="1" aria-label="Cerrar"></button>
+            </div>
+            <div class="modal-body">
+                <input type="text" class="form-control" id="cdInputNombre" maxlength="150" />
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-cd-borde" data-cd-cerrar-modal="1">Cancelar</button>
+                <button type="button" class="btn btn-cd-rojo" id="cdBtnGuardarNombre">Aplicar</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- MODAL: confirmación genérica (CD.ui.confirmar) -->
+<div class="modal fade" id="cdModalConfirmar" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title cd-confirmar-titulo">Confirmar</h5>
+                <button type="button" class="btn-close" data-cd-cerrar-modal="1" aria-label="Cerrar"></button>
+            </div>
+            <div class="modal-body cd-confirmar-mensaje"></div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-cd-borde" data-cd-cerrar-modal="1">Cancelar</button>
+                <button type="button" class="btn btn-cd-rojo cd-confirmar-aceptar">Aceptar</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- OFFCANVAS: historial de versiones -->
+<div class="offcanvas offcanvas-end" tabindex="-1" id="cdOffcanvasVersiones" aria-labelledby="cdOffcanvasVersionesTitulo">
+    <div class="offcanvas-header border-bottom">
+        <h5 class="offcanvas-title" id="cdOffcanvasVersionesTitulo"><i class="bi bi-clock-history me-2"></i>Historial de versiones</h5>
+        <button type="button" class="btn-close" data-cd-cerrar-offcanvas="1" aria-label="Cerrar"></button>
+    </div>
+    <div class="offcanvas-body" style="background:#f3f4f6">
+        <div class="small text-cd-muted mb-3">
+            Una versión publicada con respuestas no se sobrescribe: al modificarla se crea una versión nueva y se conserva la anterior.
+        </div>
+        <div id="cdListaVersiones"></div>
+    </div>
+</div>

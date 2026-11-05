@@ -1,0 +1,334 @@
+
+Necesito construir un módulo de ENCUESTAS DINÁMICAS para un portal interno corporativo.
+
+OBJETIVO
+Crear un constructor de encuestas configurable, donde un usuario administrador pueda crear, editar, ordenar, duplicar, eliminar, publicar y versionar preguntas sin necesidad de modificar código.
+
+TECNOLOGÍA Y ESTILO
+- ASP NET MVC framework 4.8 
+- jquery-3.7.1 
+- css 
+- Bootstrap v5.2.3
+- Usar Bootstrap Icons.
+- Diseño limpio, corporativo y responsive.
+- Paleta principalmente blanca, gris claro, negro y rojo como color de acción.
+- Evitar imágenes decorativas.
+- Utilizar cards, accordions, badges, modals, dropdowns, offcanvas y componentes estándar de Bootstrap cuando tenga sentido.
+- El diseño debe ser fácil de mantener y extender.
+
+El esquema será portal.capturadinamica_ si es un catalogo será c si es para un proceso tp y si es una accion de lo que hará de la tabla 
+ejemplo:
+portal.capturadinamica_tc_menu se realiza el menú de captura dnamica, el esquema es portal la tabla se estará usando para el modulo de captura dinámica tc es un cataloogo donde se estarán usando los menus y la accion es menú asi pon la nomeclatura para las tablas del modulo
+
+Estoy ocupando visual studio 2022 usando la plantilla de aspnet mvs y laestructura es como te la muestro en la imagen "Visual_1.png" 
+La estructura es la siguiente y agrega la solución donde corresponde diguiendo esta estructura
+Vamos a generar un modulo llamado CapturasDinamicas crea un administrador, un modulo de captura estos modulos deben ser vistas parciales y deben estar dentro de la siguiente estructura, el controlador debe estar en la carpeta controller anexo imagen "Visual_2_Controller.png"
+Agrega el modelo en esta la carpeta ModuloDinamico y adrentro le pones la clase como en la imagen "Visual_3_Modelo.png"
+Para generar la vista lo requiero en la carpeta Views anexo imagen "Visual_4_Vista.png"
+Para la vista parcial toma el layput llamado LayoutRadar2026 como en la imagen "Visual_5_Layout.png"
+Las referencias donde se encuentran los archivos CSS están en la carpeta "Visual_6_CSS.png"
+En el Layout radar 2026 ya se encuentran referenciadas las librerías que vas a ocupar  "Visual_7_referencias.png"
+También estan las referencias de js y Bootstrap en la siguiente imagen "Visual_8_bootstrap.png"
+
+Para lo que desarrolles de jQuery o con lenguaje de java scrip usa lenguaje simple ya que no conozco la versión del explorador del lado del cliente y si ocupas sintaxys como funciones de flecha no se va poder interpretar en el explorador que estoy ocupando y no cargara la pagina correctamente por esa razón usa lenguaje básico de programación
+
+Te pido la estructura como la tengo en mi solución ya que solo voy a copiar y pegar lo que tu me mandes con esta estructura en mi solución
+
+El modulo dinamico lo llame asi por que con encuestas que vamos hacer a los ejecutivos, pero para fines del proyecto lo voy a llmar modulo dinamico, por que una encuesta lo voy a usar para la captura de varias cosas
+
+No pongas roles ni seguridad, esa parte ya se tiene en el sistema, tengo un objeto llamado token de donde se trae el usuario, anexo imagen "Token.jpg"
+
+Anexo imagenes de muestra de la pantalla de configuración, Captura y vista previa
+
+
+ESTRUCTURA DEL MÓDULO
+
+1. ENCABEZADO
+Mostrar:
+- Nombre de la encuesta.
+- Estado: Borrador / Publicada / Cerrada / Archivada.
+- Botón "Vista previa".
+- Botón "Guardar borrador".
+- Botón "Publicar encuesta".
+
+
+2. CONSTRUCTOR DE PREGUNTAS
+Mostrar una lista de preguntas creadas.
+
+Cada pregunta debe permitir:
+- Editar.
+- Duplicar.
+- Eliminar.
+- Cambiar de posición.
+- Marcar como obligatoria.
+- Configurar validaciones.
+- Configurar lógica condicional.
+
+Agregar botón:
+"+ Agregar pregunta"
+
+3. TIPOS DE PREGUNTA
+El administrador debe poder elegir dinámicamente entre:
+
+A. Opción única
+- Radio buttons.
+- Número de opciones variable.
+- Solo una respuesta permitida.
+- Posibilidad de agregar o eliminar opciones.
+
+B. Selección múltiple
+- Checkboxes.
+- Número de opciones variable.
+- Varias respuestas permitidas.
+- Opción de habilitar "Otro".
+- Si se selecciona "Otro", mostrar campo de texto.
+- Permitir configurar mínimo y máximo de selecciones.
+
+C. Texto libre
+- Campo corto o textarea.
+- Configurar máximo de caracteres.
+- Configurar mínimo de caracteres.
+- Mostrar contador de caracteres.
+- Configurar si es obligatorio.
+
+D. Sí / No
+- Dos opciones simples.
+
+E. Escala
+- Permitir configurar escala, por ejemplo:
+  1 a 5
+  1 a 10
+
+F. Fecha
+- Selector de fecha.
+
+G. Número
+- Solo valores numéricos.
+- Permitir mínimo y máximo.
+
+H. Desplegable
+- Select con opciones configurables.
+
+I. Matriz
+Permitir definir:
+- Filas.
+- Columnas.
+- Tipo de selección por fila.
+- Una respuesta por fila.
+
+Ejemplo:
+
+Pregunta:
+"Evalúa los siguientes aspectos"
+
+Filas:
+- Facilidad de uso
+- Rapidez
+- Soporte
+- Claridad del material
+
+Columnas:
+- Muy insatisfecho
+- Insatisfecho
+- Neutral
+- Satisfecho
+- Muy satisfecho
+
+Cada fila debe permitir seleccionar una sola opción.
+
+J. Multiselección dependiente
+Crear listas encadenadas donde las opciones del siguiente nivel dependan de la selección anterior.
+
+Ejemplo:
+
+Nivel 1: Banca
+- Banca Personal
+- Premier
+- RBB Digital
+
+Nivel 2: Producto
+Si selecciona Banca Personal:
+- Tarjeta de crédito
+- Crédito sin garantía
+- Portabilidad
+- Nómina
+
+Nivel 3: Recurso
+Si selecciona Tarjeta de crédito:
+- Guía comercial
+- Argumentos de venta
+- Manejo de objeciones
+- Presentación
+
+Permitir selección múltiple cuando se configure.
+
+4. LÓGICA CONDICIONAL
+Cada pregunta debe poder tener reglas del tipo:
+
+SI respuesta = X
+ENTONCES:
+- Mostrar pregunta Y.
+- Ocultar pregunta Y.
+- Ir a pregunta Z.
+- Finalizar encuesta.
+
+Ejemplo:
+
+Pregunta:
+"¿Actualmente utilizas Productivity Suite?"
+
+Respuestas:
+- Sí
+- No
+- No aplica
+
+Reglas:
+- Si "Sí" → mostrar pregunta 5.
+- Si "No" → mostrar pregunta 6.
+- Si "No aplica" → finalizar encuesta.
+
+La lógica debe ser configurable sin cambiar código.
+
+5. PANEL DE CONFIGURACIÓN DE PREGUNTA
+Al seleccionar una pregunta, mostrar un panel lateral o sección editable con:
+
+- Tipo de pregunta.
+- Texto de la pregunta.
+- Obligatoria Sí/No.
+- Opciones de respuesta.
+- Orden aleatorio Sí/No.
+- Permitir Otro Sí/No.
+- Máximo de caracteres.
+- Mínimo de caracteres.
+- Máximo de selecciones.
+- Mínimo de selecciones.
+- Configuración de lógica condicional.
+
+6. VISTA PREVIA
+Agregar una vista previa de cómo verá la encuesta el usuario.
+
+Permitir:
+- Desktop.
+- Tablet.
+- Móvil.
+
+7. VERSIONADO
+La encuesta debe soportar versiones.
+
+Regla:
+Una encuesta publicada que ya tenga respuestas no debe sobrescribirse directamente.
+
+Si se modifica:
+- Crear nueva versión.
+- Mantener histórico de la versión anterior.
+
+Ejemplo:
+Encuesta Comercial
+- Versión 1 publicada
+- Versión 2 borrador
+
+8. RESPUESTAS
+Guardar las respuestas de forma flexible.
+
+NO crear columnas:
+pregunta1
+pregunta2
+pregunta3
+
+Diseñar un modelo dinámico.
+
+Proponer entidades similares a:
+
+Survey
+SurveyVersion
+Question
+QuestionType
+QuestionOption
+ConditionalRule
+SurveyResponse
+QuestionResponse
+DependentOption
+
+9. RESULTADOS
+Crear una sección de resultados por encuesta.
+
+Mostrar:
+- Total de respuestas.
+- Tasa de respuesta.
+- Respuestas pendientes.
+- Fecha de inicio.
+- Fecha de cierre.
+
+Por tipo:
+
+Opción única:
+- Conteo.
+- Porcentaje.
+- Gráfica de barras.
+
+Selección múltiple:
+- Conteo por opción.
+- Porcentaje por opción.
+
+Texto libre:
+- Lista de respuestas.
+- Buscador.
+
+Matriz:
+- Resumen por fila y columna.
+
+10. PUBLICACIÓN
+Permitir configurar:
+- Fecha de inicio.
+- Fecha de cierre.
+- Una respuesta por usuario o múltiples.
+- Encuesta anónima Sí/No.
+- Requiere usuario autenticado Sí/No.
+- Mensaje inicial.
+- Mensaje final.
+
+11. SEGMENTACIÓN
+Permitir definir quién puede responder.
+
+Ejemplos:
+- Ejecutivos.
+- Gerentes.
+- Segmento.
+- Región.
+- Sucursal.
+- Usuarios específicos.
+
+12. EXPERIENCIA DE USUARIO
+Priorizar:
+- Claridad.
+- Pocos clics.
+- Diseño limpio.
+- No saturar la pantalla.
+- Usar cards y accordions para organizar configuración avanzada.
+- Las reglas condicionales deben ser fáciles de entender visualmente.
+- El administrador debe poder construir una encuesta sin conocimientos técnicos.
+
+ENTREGABLE
+
+Genera una primera versión funcional del módulo.
+
+Incluye:
+1. HTML.
+2. CSS.
+3. JavaScript.
+4. Bootstrap 5.2.3.
+5. Bootstrap Icons.
+6. Datos mock para demostrar el funcionamiento.
+7. Ejemplos funcionando de:
+   - Opción única.
+   - Multiselección con Otro.
+   - Texto libre con límite.
+   - Pregunta condicional.
+   - Multiselección dependiente.
+   - Matriz.
+8. Comentarios claros en el código.
+9. Código modular para posteriormente conectarlo a una base de datos o API.
+
+Primero genera la estructura completa de la pantalla.
+Después genera el código.
+Al final explica brevemente cómo está organizado y dónde debería conectarse posteriormente el backend.

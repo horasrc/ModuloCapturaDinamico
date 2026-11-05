@@ -1,0 +1,15 @@
+﻿@*
+    =====================================================================
+    MÓDULO CAPTURA DINÁMICA - Administrador (listado de encuestas)
+    URL: /CapturasDinamicas/Administrador
+    Todo el contenido vive en la vista parcial _ListadoEncuestas para que
+    también se pueda incrustar en otra pantalla del portal:
+        @Html.Action("AdministradorParcial", "CapturasDinamicas")
+    =====================================================================
+*@
+@{
+    ViewBag.Title = "Captura dinámica - Administrador";
+    Layout = "~/Views/Shared/_LayoutRadar2026.cshtml";
+}
+
+@Html.Partial("_ListadoEncuestas")

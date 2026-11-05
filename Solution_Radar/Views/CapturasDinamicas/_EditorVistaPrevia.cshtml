@@ -1,0 +1,20 @@
+﻿@* 6. VISTA PREVIA: Desktop / Tablet / Móvil (incluye cambios sin guardar) *@
+<div class="cd-card">
+    <div class="cd-card-body py-2 d-flex flex-wrap justify-content-between align-items-center gap-2">
+        <div class="btn-group cd-dispositivos" role="group">
+            <button type="button" class="btn btn-sm activo" data-cd-dispositivo="desktop"><i class="bi bi-display me-1"></i>Desktop</button>
+            <button type="button" class="btn btn-sm" data-cd-dispositivo="tablet"><i class="bi bi-tablet me-1"></i>Tablet</button>
+            <button type="button" class="btn btn-sm" data-cd-dispositivo="movil"><i class="bi bi-phone me-1"></i>Móvil</button>
+        </div>
+        <div class="d-flex align-items-center gap-2">
+            <span class="small text-cd-muted">Incluye cambios sin guardar · prueba la lógica condicional</span>
+            <button type="button" class="btn btn-sm btn-cd-borde" id="cdPreviewReiniciar"><i class="bi bi-arrow-counterclockwise me-1"></i>Reiniciar</button>
+        </div>
+    </div>
+</div>
+
+<div class="cd-preview-lienzo">
+    <div class="cd-preview-marco" id="cdPreviewMarco">
+        <div id="cdPreviewContenido"></div>
+    </div>
+</div>
