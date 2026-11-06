@@ -204,13 +204,17 @@ Las vistas usan `Layout = "~/Views/Shared/_LayoutRadar2026.cshtml"`, el que ya e
 - **Con** la cadena `CapturaDinamica` → `CapturaDinamicaRepositorioSql` (ADO.NET, sin Entity Framework).
 - **Sin** ella → `CapturaDinamicaRepositorioMock` (memoria).
 
-### En el portal real
-1. Ejecuta `Solution_Radar/DataAccess/CapturasDinamicas/Script_CapturaDinamica.sql` en el SQL Server
-   del portal (crea el esquema `portal` si no existe, las tablas `tc_`/`tp_` y los catálogos).
-2. Agrega la cadena de conexión `CapturaDinamica` al `Web.config` del portal apuntando a esa base.
+### En el portal real (usando la conexión existente `CNN`)
+1. Ejecuta `Solution_Radar/DataAccess/CapturasDinamicas/Script_CapturaDinamica.sql` en la base a la
+   que apunta `CNN` (crea el esquema `portal` si no existe, las tablas `tc_`/`tp_` y los catálogos).
+   Ejecútalo primero en Desarrollo; para Producción pásalo por el proceso normal de cambios.
+2. En el `Web.config` del portal, dentro de `<appSettings>`, agrega:
+   ```xml
+   <add key="CapturaDinamica:NombreConexion" value="CNN" />
+   ```
+   El módulo usará la misma conexión que el resto del portal; al cambiar `CNN` de Desarrollo a
+   Producción, el módulo cambia también.
 3. **No** agregues `CapturaDinamica:CargarDatosPrueba` en producción.
-4. Si el portal ya tiene su propia forma de obtener conexiones, cambia solo el constructor del
-   controller para pasarle tu cadena a `new CapturaDinamicaRepositorioSql(...)`.
 
 Pendientes marcados con `TODO BD`: validar la **segmentación** al capturar y calcular la
 **población objetivo** con la tabla de empleados del portal.

@@ -26,19 +26,23 @@ namespace Solution_Radar.Controllers
         private readonly ICapturaDinamicaRepositorio _repositorio;
 
         /// <summary>
-        /// Si en Web.config existe la cadena de conexión "CapturaDinamica" se usa SQL Server;
-        /// si no existe, se usan los datos mock en memoria.
+        /// Elige dónde se guardan los datos:
+        ///  - appSetting "CapturaDinamica:NombreConexion" indica qué cadena de connectionStrings usar
+        ///    (por ejemplo "CNN", la conexión que ya tiene el portal). Si no existe, se busca "CapturaDinamica".
+        ///  - Si la cadena existe se usa SQL Server; si no, datos mock en memoria.
         ///
-        ///   &lt;connectionStrings&gt;
-        ///     &lt;add name="CapturaDinamica" connectionString="Data Source=...;Initial Catalog=...;Integrated Security=True" providerName="System.Data.SqlClient" /&gt;
-        ///   &lt;/connectionStrings&gt;
+        ///   &lt;appSettings&gt;
+        ///     &lt;add key="CapturaDinamica:NombreConexion" value="CNN" /&gt;
+        ///   &lt;/appSettings&gt;
         ///
         /// En ambientes de prueba, appSetting "CapturaDinamica:CargarDatosPrueba" = "true"
-        /// carga las encuestas de ejemplo cuando la base está vacía.
+        /// carga las encuestas de ejemplo cuando la base está vacía. No usarlo en producción.
         /// </summary>
         public CapturasDinamicasController()
         {
-            var cadena = ConfigurationManager.ConnectionStrings["CapturaDinamica"];
+            string nombreConexion = ConfigurationManager.AppSettings["CapturaDinamica:NombreConexion"];
+            if (string.IsNullOrWhiteSpace(nombreConexion)) { nombreConexion = "CapturaDinamica"; }
+            var cadena = ConfigurationManager.ConnectionStrings[nombreConexion];
             if (cadena != null && !string.IsNullOrWhiteSpace(cadena.ConnectionString))
             {
                 var sql = new CapturaDinamicaRepositorioSql(cadena.ConnectionString);
