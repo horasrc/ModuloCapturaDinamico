@@ -9,6 +9,26 @@ resultados y pantalla de captura para el usuario final.
 
 ---
 
+## Inicio rápido (computadora del trabajo)
+
+1. **Verifica** que tengas Visual Studio 2022 con "Desarrollo de ASP.NET y web", Git y LocalDB
+   (en una terminal: `git --version` y `sqllocaldb info`). Detalle en la sección 1.
+2. **Descarga** el código (se abrirá el navegador para iniciar sesión en GitHub):
+   ```
+   cd C:\Proyectos
+   git clone https://github.com/horasrc/ModuloCapturaDinamico.git
+   ```
+3. **Ejecuta** `ModuloCapturaDinamico\ProyectoPrueba\Ejecutar.cmd` (doble clic). La primera vez:
+   copia el módulo al proyecto de prueba, crea la base `CapturaDinamica` en LocalDB, descarga NuGet,
+   compila y abre `http://localhost:51234/CapturasDinamicas/Administrador`.
+4. **Para depurar con F5**: después del paso 3, abre `ProyectoPrueba\Solution_Radar_Prueba.sln`
+   con Visual Studio y presiona F5.
+5. **Para actualizar** cuando haya cambios: `git pull` y vuelve a correr `Ejecutar.cmd`.
+   Si Visual Studio estaba abierto, recarga el proyecto (clic derecho → *Descargar* / *Volver a cargar*)
+   para que vea los archivos nuevos.
+
+---
+
 ## Contenido del repositorio
 
 ```
@@ -28,11 +48,13 @@ ModuloCapturaDinamico/
     ├── Ejecutar.cmd          doble clic: sincroniza, compila y abre el navegador
     ├── Ejecutar.ps1
     ├── Sincronizar.ps1       copia Solution_Radar/ → ProyectoPrueba/Solution_Radar/
+    ├── CrearBaseLocalDB.ps1  crea la base CapturaDinamica en LocalDB (-Recrear la reinicia)
     └── Solution_Radar/       Web.config, Global.asax, layout simulado, etc.
 ```
 
-> **Estado actual:** los datos son **mock en memoria** (`CapturaDinamicaRepositorioMock`).
-> Se reinician cada vez que se reinicia IIS / IIS Express. Ver la sección 6 para conectar la base de datos.
+> **Datos:** si el `Web.config` tiene la cadena de conexión `CapturaDinamica`, el módulo usa
+> **SQL Server** (`CapturaDinamicaRepositorioSql`). Si no la tiene, usa datos **mock en memoria**.
+> El proyecto de prueba ya viene configurado con **SQL Server LocalDB** (sección 6).
 
 ---
 
@@ -42,6 +64,7 @@ ModuloCapturaDinamico/
 |---|---|
 | **Visual Studio 2022** con la carga de trabajo **"Desarrollo de ASP.NET y web"** | Visual Studio Installer → Modificar → debe estar marcada. Incluye IIS Express y el paquete de destino de .NET Framework 4.8. |
 | **.NET Framework 4.8 targeting pack** | Visual Studio Installer → Componentes individuales → ".NET Framework 4.8 targeting pack". |
+| **SQL Server Express LocalDB** | Viene con la carga de trabajo web de VS. Verifica en una terminal: `sqllocaldb info` (debe aparecer `MSSQLLocalDB`). Si no: Visual Studio Installer → Componentes individuales → "SQL Server Express LocalDB". |
 | **Git para Windows** | En una terminal: `git --version`. Si no está: https://git-scm.com/download/win |
 | **Acceso a internet** (o proxy configurado) | Para descargar paquetes NuGet (`Microsoft.AspNet.Mvc 5.2.3`) y cargar Bootstrap/jQuery desde CDN en el proyecto de prueba. |
 
@@ -79,14 +102,16 @@ ModuloCapturaDinamico/
 2. Doble clic en **`Ejecutar.cmd`**.
 3. El script:
    1. Copia los archivos de `Solution_Radar/` al proyecto de prueba.
-   2. Restaura NuGet y compila.
-   3. Inicia IIS Express en el puerto **51234** y abre el navegador.
+   2. Crea la base `CapturaDinamica` en LocalDB y sus tablas (solo la primera vez).
+   3. Restaura NuGet y compila.
+   4. Inicia IIS Express en el puerto **51234** y abre el navegador.
+   Al abrir el módulo por primera vez se cargan las encuestas de ejemplo en la base.
 4. Para detenerlo: en la ventana negra presiona **Ctrl + C** (o la tecla **Q** de IIS Express) y ciérrala.
 
 ### Opción B — desde Visual Studio (permite depurar)
 
-1. Ejecuta **`ProyectoPrueba\Sincronizar.ps1`** (clic derecho → *Ejecutar con PowerShell*),
-   o simplemente corre `Ejecutar.cmd` una vez.
+1. Ejecuta **`ProyectoPrueba\Sincronizar.ps1`** y **`ProyectoPrueba\CrearBaseLocalDB.ps1`**
+   (clic derecho → *Ejecutar con PowerShell*), o simplemente corre `Ejecutar.cmd` una vez.
 2. Abre **`ProyectoPrueba\Solution_Radar_Prueba.sln`** con Visual Studio 2022.
 3. Si pregunta por restaurar paquetes NuGet, acepta (o clic derecho a la solución → *Restaurar paquetes NuGet*).
 4. Presiona **F5**. Se abre `http://localhost:51234/CapturasDinamicas/Administrador`.
@@ -108,7 +133,8 @@ ModuloCapturaDinamico/
   - Modifica cualquier pregunta y **Guardar borrador** → como la versión 1 ya tiene respuestas, se crea la **Versión 2** en borrador (clic en el badge de versión para ver el historial).
   - Pestaña **Resultados**: indicadores, barras, buscador de textos y matriz.
 - **Captura**: el usuario simulado puede responder la encuesta 1 una sola vez.
-- Al **reiniciar IIS Express** todo regresa al estado inicial.
+- Todo se guarda en LocalDB: **sobrevive a reinicios**. Para volver al estado inicial:
+  cierra IIS Express y ejecuta `ProyectoPrueba\CrearBaseLocalDB.ps1 -Recrear`.
 
 ---
 
@@ -150,19 +176,44 @@ Las vistas usan `Layout = "~/Views/Shared/_LayoutRadar2026.cshtml"`, el que ya e
 | Página sin estilos | No hay acceso a los CDN de Bootstrap. En el portal real el layout usa los archivos locales, así que ahí no pasa. |
 | 404 en `/Scripts/CapturasDinamicas/...` en el portal | Los archivos no se copiaron o no se incluyeron en el proyecto (sección 4, paso 3). |
 | Acordeones que se abren y cierran solos en otras pantallas del portal | El `_LayoutRadar2026` carga jQuery y Bootstrap dos veces. El módulo ya está preparado para eso; se recomienda dejar una sola copia de cada librería en el layout. |
+| `No se pudo conectar a (localdb)\MSSQLLocalDB` | Falta LocalDB (sección 1). Mientras tanto puedes borrar la línea `<add name="CapturaDinamica" ...>` del `ProyectoPrueba\Solution_Radar\Web.config` para usar los datos mock. |
+| Error "Invalid object name portal.capturadinamica_..." | La base existe pero sin tablas: ejecuta `CrearBaseLocalDB.ps1 -Recrear`. |
+| `El nombre del tipo ... 'CapturaDinamicaRepositorioSql' no se encontró` al dar F5 | Visual Studio cargó el proyecto antes de que existiera el archivo. Clic derecho al proyecto → *Descargar el proyecto* → *Volver a cargar el proyecto* (o cierra y abre la solución). Si es en el portal real: copia ese archivo e *Inclúyelo en el proyecto*. |
+| Quiero ver los datos en SQL | Visual Studio → *Ver → Explorador de objetos de SQL Server* → `(localdb)\MSSQLLocalDB` → Bases de datos → `CapturaDinamica`. |
 | El usuario sale como "Usuario de prueba" | No existe el objeto global `Token` en la página. En el portal lo crea `Scripts/Token/Page.js`. |
 
 ---
 
-## 6. Siguiente paso: base de datos
+## 6. Base de datos
 
-1. Ejecuta `Solution_Radar/DataAccess/CapturasDinamicas/Script_CapturaDinamica.sql` en SQL Server
-   (crea las tablas `portal.capturadinamica_tc_*` y `portal.capturadinamica_tp_*`).
-2. Crea `CapturaDinamicaRepositorioSql` que implemente `ICapturaDinamicaRepositorio`.
-3. En `CapturasDinamicasController` cambia `new CapturaDinamicaRepositorioMock()` por el repositorio SQL.
-4. Las vistas y el JavaScript no cambian.
+### Cómo elige el módulo dónde guardar
+`CapturasDinamicasController` revisa el `Web.config`:
 
-Detalle completo en `Solution_Radar/LEEME_CapturasDinamicas.md`.
+```xml
+<connectionStrings>
+  <add name="CapturaDinamica"
+       connectionString="Data Source=(localdb)\MSSQLLocalDB;Initial Catalog=CapturaDinamica;Integrated Security=True"
+       providerName="System.Data.SqlClient" />
+</connectionStrings>
+<appSettings>
+  <!-- Solo pruebas: carga las encuestas de ejemplo si la base está vacía -->
+  <add key="CapturaDinamica:CargarDatosPrueba" value="true" />
+</appSettings>
+```
+
+- **Con** la cadena `CapturaDinamica` → `CapturaDinamicaRepositorioSql` (ADO.NET, sin Entity Framework).
+- **Sin** ella → `CapturaDinamicaRepositorioMock` (memoria).
+
+### En el portal real
+1. Ejecuta `Solution_Radar/DataAccess/CapturasDinamicas/Script_CapturaDinamica.sql` en el SQL Server
+   del portal (crea el esquema `portal` si no existe, las tablas `tc_`/`tp_` y los catálogos).
+2. Agrega la cadena de conexión `CapturaDinamica` al `Web.config` del portal apuntando a esa base.
+3. **No** agregues `CapturaDinamica:CargarDatosPrueba` en producción.
+4. Si el portal ya tiene su propia forma de obtener conexiones, cambia solo el constructor del
+   controller para pasarle tu cadena a `new CapturaDinamicaRepositorioSql(...)`.
+
+Pendientes marcados con `TODO BD`: validar la **segmentación** al capturar y calcular la
+**población objetivo** con la tabla de empleados del portal.
 
 ---
 

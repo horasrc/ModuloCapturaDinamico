@@ -4,6 +4,7 @@ $puerto  = 51234
 $proyecto = Join-Path $PSScriptRoot 'Solution_Radar'
 
 & (Join-Path $PSScriptRoot 'Sincronizar.ps1')
+& (Join-Path $PSScriptRoot 'CrearBaseLocalDB.ps1')
 
 # Buscar MSBuild de Visual Studio 2022
 $vswhere = "${env:ProgramFiles(x86)}\Microsoft Visual Studio\Installer\vswhere.exe"

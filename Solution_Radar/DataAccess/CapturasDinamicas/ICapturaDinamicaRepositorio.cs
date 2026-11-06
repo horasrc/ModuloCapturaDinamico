@@ -46,4 +46,14 @@ namespace Solution_Radar.DataAccess.CapturasDinamicas
         /// <summary>Guarda la respuesta del usuario.</summary>
         ResultadoOperacion GuardarRespuesta(RespuestaEncuesta respuesta, UsuarioToken usuario);
     }
+
+    /// <summary>Datos de ejemplo de una encuesta (para sembrar una base de pruebas).</summary>
+    public class SemillaEncuesta
+    {
+        public string Nombre { get; set; }
+        public string Descripcion { get; set; }
+        public string UsuarioModifica { get; set; }
+        public List<EncuestaEditor> Versiones { get; set; }          // ordenadas por NumeroVersion
+        public List<RespuestaEncuesta> Respuestas { get; set; }       // IdVersion = id de la versión en la semilla
+    }
 }

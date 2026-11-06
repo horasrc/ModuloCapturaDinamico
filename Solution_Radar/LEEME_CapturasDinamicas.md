@@ -14,6 +14,7 @@ Solution_Radar
 │   └── CapturasDinamicas
 │       ├── ICapturaDinamicaRepositorio.cs   (contrato de datos)
 │       ├── CapturaDinamicaRepositorioMock.cs(datos mock en memoria)
+│       ├── CapturaDinamicaRepositorioSql.cs (SQL Server con ADO.NET)
 │       └── Script_CapturaDinamica.sql       (tablas portal.capturadinamica_*)
 ├── Views
 │   └── CapturasDinamicas
@@ -60,14 +61,21 @@ o `@Html.Action("CapturaParcial", "CapturasDinamicas", new { id = 1 })`.
 - El usuario se toma del objeto global `Token` (`NumEmpleado`, `NombreEmpleado`, `Puesto`, `Cencos`).
 - JavaScript en ES5 (sin flechas, `let/const`, template strings ni `Promise`).
 
-## 4. Dónde conectar el backend
+## 4. Base de datos
 
-1. Ejecutar `Script_CapturaDinamica.sql`.
-2. Crear `CapturaDinamicaRepositorioSql : ICapturaDinamicaRepositorio` en `DataAccess/CapturasDinamicas`
-   con la conexión del portal. Cada método del Mock documenta la regla de negocio a respetar
-   (versionado, una respuesta por usuario, fechas, etc.).
-3. En `CapturasDinamicasController` cambiar
-   `new CapturaDinamicaRepositorioMock()` por `new CapturaDinamicaRepositorioSql()`.
+`DataAccess/CapturasDinamicas/CapturaDinamicaRepositorioSql.cs` implementa el repositorio con
+ADO.NET contra las tablas `portal.capturadinamica_*` (mismas reglas de negocio que el Mock).
+
+1. Ejecutar `Script_CapturaDinamica.sql` en el SQL Server del portal.
+2. Agregar al `Web.config` del portal:
+   ```xml
+   <connectionStrings>
+     <add name="CapturaDinamica" connectionString="Data Source=SERVIDOR;Initial Catalog=BASE;Integrated Security=True" providerName="System.Data.SqlClient" />
+   </connectionStrings>
+   ```
+   El controller usa SQL si esa cadena existe; si no, usa el Mock en memoria.
+3. `CapturaDinamica:CargarDatosPrueba = true` (appSettings) siembra encuestas de ejemplo en una base
+   vacía. **Solo para pruebas**, no usarlo en producción.
 4. Pendientes marcados con `TODO BD`: validar la **segmentación** en `ObtenerCaptura`
    y calcular `PoblacionObjetivo` con la tabla de empleados.
 

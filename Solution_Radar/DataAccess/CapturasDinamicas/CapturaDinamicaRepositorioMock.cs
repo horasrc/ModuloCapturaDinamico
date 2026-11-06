@@ -48,6 +48,31 @@ namespace Solution_Radar.DataAccess.CapturasDinamicas
             }
         }
 
+        /// <summary>
+        /// Copia de los datos de ejemplo (encuestas, versiones y respuestas).
+        /// La usa CapturaDinamicaRepositorioSql para sembrar una base de datos vacía de pruebas.
+        /// </summary>
+        public static List<SemillaEncuesta> DatosSemilla()
+        {
+            lock (_lock)
+            {
+                if (_encuestas == null) { InicializarDatosMock(); }
+                var lista = new List<SemillaEncuesta>();
+                foreach (var a in _encuestas.OrderBy(x => x.IdEncuesta))
+                {
+                    var s = new SemillaEncuesta();
+                    s.Nombre = a.Nombre;
+                    s.Descripcion = a.Descripcion;
+                    s.UsuarioModifica = a.UsuarioModifica;
+                    s.Versiones = a.Versiones.OrderBy(v => v.NumeroVersion).Select(v => Clonar(v)).ToList();
+                    var ids = new HashSet<int>(a.Versiones.Select(v => v.IdVersion));
+                    s.Respuestas = _respuestas.Where(r => ids.Contains(r.IdVersion)).Select(r => Clonar(r)).ToList();
+                    lista.Add(s);
+                }
+                return lista;
+            }
+        }
+
         // ==================================================================
         //  CONSULTAS
         // ==================================================================

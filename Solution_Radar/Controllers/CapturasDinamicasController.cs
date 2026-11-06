@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Configuration;
 using System.Web.Mvc;
 using System.Web.Script.Serialization;
 using Solution_Radar.DataAccess.CapturasDinamicas;
@@ -22,12 +23,35 @@ namespace Solution_Radar.Controllers
     /// </summary>
     public class CapturasDinamicasController : Controller
     {
-        // Para conectar la BD: cambia CapturaDinamicaRepositorioMock por tu implementación SQL.
         private readonly ICapturaDinamicaRepositorio _repositorio;
 
+        /// <summary>
+        /// Si en Web.config existe la cadena de conexión "CapturaDinamica" se usa SQL Server;
+        /// si no existe, se usan los datos mock en memoria.
+        ///
+        ///   &lt;connectionStrings&gt;
+        ///     &lt;add name="CapturaDinamica" connectionString="Data Source=...;Initial Catalog=...;Integrated Security=True" providerName="System.Data.SqlClient" /&gt;
+        ///   &lt;/connectionStrings&gt;
+        ///
+        /// En ambientes de prueba, appSetting "CapturaDinamica:CargarDatosPrueba" = "true"
+        /// carga las encuestas de ejemplo cuando la base está vacía.
+        /// </summary>
         public CapturasDinamicasController()
         {
-            _repositorio = new CapturaDinamicaRepositorioMock();
+            var cadena = ConfigurationManager.ConnectionStrings["CapturaDinamica"];
+            if (cadena != null && !string.IsNullOrWhiteSpace(cadena.ConnectionString))
+            {
+                var sql = new CapturaDinamicaRepositorioSql(cadena.ConnectionString);
+                if (string.Equals(ConfigurationManager.AppSettings["CapturaDinamica:CargarDatosPrueba"], "true", StringComparison.OrdinalIgnoreCase))
+                {
+                    sql.AsegurarDatosDePrueba();
+                }
+                _repositorio = sql;
+            }
+            else
+            {
+                _repositorio = new CapturaDinamicaRepositorioMock();
+            }
         }
 
         // ==================================================================

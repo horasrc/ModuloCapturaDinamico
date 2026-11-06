@@ -100,7 +100,8 @@ CREATE TABLE portal.capturadinamica_tp_encuesta (
     FechaAlta           DATETIME          NOT NULL DEFAULT(GETDATE()),
     NumEmpleadoAlta     VARCHAR(20)       NULL,
     FechaModificacion   DATETIME          NULL,
-    NumEmpleadoModifica VARCHAR(20)       NULL
+    NumEmpleadoModifica VARCHAR(20)       NULL,
+    NombreEmpleadoModifica NVARCHAR(150)  NULL
 );
 GO
 
