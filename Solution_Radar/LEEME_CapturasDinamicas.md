@@ -1,11 +1,13 @@
-﻿# Módulo Captura Dinámica (encuestas dinámicas)
+﻿# Módulo Captura Dinámica — referencia técnica
+
+Guía de instalación completa y solución de problemas: `README.md` en la raíz del repositorio.
 
 ## 1. Archivos (copiar a la misma ruta dentro de `Solution_Radar`)
 
 ```
 Solution_Radar
 ├── Controllers
-│   └── CapturasDinamicasController.cs
+│   └── CapturasDinamicasController.cs   vistas + API JSON; elige repositorio SQL o mock
 ├── Models
 │   └── ModuloDinamico
 │       ├── CapturaDinamicaModelos.cs        (Encuesta, Pregunta, Opción, Regla, Respuesta...)
@@ -13,9 +15,9 @@ Solution_Radar
 ├── DataAccess
 │   └── CapturasDinamicas
 │       ├── ICapturaDinamicaRepositorio.cs   (contrato de datos)
-│       ├── CapturaDinamicaRepositorioMock.cs(datos mock en memoria)
 │       ├── CapturaDinamicaRepositorioSql.cs (SQL Server con ADO.NET)
-│       └── Script_CapturaDinamica.sql       (tablas portal.capturadinamica_*)
+│       ├── CapturaDinamicaRepositorioMock.cs(datos de ejemplo en memoria)
+│       └── Script_CapturaDinamica.sql       (tablas portal.capturadinamica_*; se ejecuta en SSMS)
 ├── Views
 │   └── CapturasDinamicas
 │       ├── Administrador.cshtml   -> _ListadoEncuestas.cshtml
@@ -37,17 +39,18 @@ Solution_Radar
         └── cd.captura.js     pantalla del usuario final
 ```
 
-**Importante (proyecto .NET Framework):** después de copiar, en Visual Studio activa
-*Show All Files* en el Solution Explorer, clic derecho sobre cada carpeta/archivo nuevo →
-**Include In Project**. Si el namespace raíz del proyecto no es `Solution_Radar`, ajústalo en los `.cs`.
+Después de copiar, en Visual Studio: **Mostrar todos los archivos** → clic derecho sobre cada archivo
+nuevo → **Incluir en el proyecto**. Se requiere la referencia **System.Configuration**.
+Si el namespace raíz del proyecto no es `Solution_Radar`, ajústalo en los `.cs`.
+Todos los archivos están en UTF-8 con firma (BOM) para que los acentos se vean bien.
 
 ## 2. URLs
 
 | Pantalla | URL |
 |---|---|
 | Administrador (listado) | `/CapturasDinamicas/Administrador` |
-| Constructor | `/CapturasDinamicas/Editor/1` (`#resultados` abre resultados) |
-| Captura (usuario final) | `/CapturasDinamicas/Captura/1` |
+| Constructor | `/CapturasDinamicas/Editor/{id}` (`#resultados` abre resultados) |
+| Captura (usuario final) | `/CapturasDinamicas/Captura/{id}` |
 
 Para incrustar en otra pantalla: `@Html.Action("AdministradorParcial", "CapturasDinamicas")`
 o `@Html.Action("CapturaParcial", "CapturasDinamicas", new { id = 1 })`.
@@ -60,23 +63,39 @@ o `@Html.Action("CapturaParcial", "CapturasDinamicas", new { id = 1 })`.
   con la API JS (`CD.ui.modal`, `CD.ui.offcanvas`). Recomendación: dejar una sola copia de cada uno.
 - El usuario se toma del objeto global `Token` (`NumEmpleado`, `NombreEmpleado`, `Puesto`, `Cencos`).
 - JavaScript en ES5 (sin flechas, `let/const`, template strings ni `Promise`).
+- C# compatible con C# 5 (sin interpolación `$""`, `?.` ni `nameof`).
 
 ## 4. Base de datos
 
-`DataAccess/CapturasDinamicas/CapturaDinamicaRepositorioSql.cs` implementa el repositorio con
-ADO.NET contra las tablas `portal.capturadinamica_*` (mismas reglas de negocio que el Mock).
+`CapturaDinamicaRepositorioSql.cs` implementa el repositorio con ADO.NET contra las tablas
+`portal.capturadinamica_*`, con las mismas reglas de negocio que el mock:
 
-1. Ejecutar `Script_CapturaDinamica.sql` en el SQL Server del portal.
-2. Agregar al `Web.config` del portal:
+- Una versión publicada/cerrada/archivada **con respuestas no se sobrescribe**: se actualiza el
+  borrador existente o se crea una versión nueva.
+- Al publicar, la versión publicada anterior pasa a **Archivada** (histórico).
+- **Una respuesta por usuario** cuando la versión lo indica.
+- Cada guardado se hace en una transacción.
+
+### Elección del repositorio (constructor del controller)
+
+1. appSetting `CapturaDinamica:NombreConexion` → nombre de la cadena en `<connectionStrings>`.
+2. Si no existe, busca la cadena `CapturaDinamica`.
+3. Si no hay cadena → `CapturaDinamicaRepositorioMock` (memoria).
+
+### Instalación en el portal
+
+1. Ejecutar `Script_CapturaDinamica.sql` en SSMS sobre la base de `CNN`. Se puede ejecutar varias
+   veces; al final muestra un resumen (16 tablas, 14 llaves foráneas, 6 índices).
+2. En `<appSettings>` del `Web.config` del portal:
    ```xml
-   <connectionStrings>
-     <add name="CapturaDinamica" connectionString="Data Source=SERVIDOR;Initial Catalog=BASE;Integrated Security=True" providerName="System.Data.SqlClient" />
-   </connectionStrings>
+   <add key="CapturaDinamica:NombreConexion" value="CNN" />
    ```
-   El controller usa SQL si esa cadena existe; si no, usa el Mock en memoria.
-3. `CapturaDinamica:CargarDatosPrueba = true` (appSettings) siembra encuestas de ejemplo en una base
-   vacía. **Solo para pruebas**, no usarlo en producción.
-4. Pendientes marcados con `TODO BD`: validar la **segmentación** en `ObtenerCaptura`
-   y calcular `PoblacionObjetivo` con la tabla de empleados.
+3. `CapturaDinamica:CargarDatosPrueba = true` siembra encuestas de ejemplo en una base vacía.
+   **Solo para pruebas**: no usarlo en el portal.
 
-El JavaScript y las vistas no cambian: hablan solo con el controller mediante `cd.api.js`.
+### Pendientes marcados con `TODO BD`
+
+- Validar la **segmentación** en `ObtenerCaptura`.
+- Calcular `PoblacionObjetivo` con la tabla de empleados.
+
+El JavaScript y las vistas no dependen de la base: hablan solo con el controller mediante `cd.api.js`.
