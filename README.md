@@ -5,7 +5,12 @@ Constructor de encuestas configurable para el portal **Solution_Radar**
 
 El administrador crea, edita, ordena, duplica, elimina, publica y versiona preguntas sin programar.
 Incluye 10 tipos de pregunta, lógica condicional, vista previa Desktop/Tablet/Móvil, versionado,
-resultados y pantalla de captura para el usuario final.
+resultados y pantalla de captura para el usuario final. Además:
+
+- **Fecha → calendario de Outlook:** una pregunta de fecha puede ofrecer "Agregar a mi calendario de
+  Outlook al enviar" (con hora opcional). Al enviar se descarga un archivo `.ics` que Outlook abre como cita.
+- **Campo llave:** una pregunta de texto o número puede ser la llave de la encuesta (ej. número de cliente).
+  Al capturarla se busca la **última captura** con ese valor y se cargan sus respuestas para actualizarlas.
 
 Repositorio: **https://github.com/horasrc/ModuloCapturaDinamico** (privado)
 
@@ -34,7 +39,7 @@ ModuloCapturaDinamico/
 │   ├── Controllers/CapturasDinamicasController.cs
 │   ├── Models/ModuloDinamico/               modelos y cálculo de resultados
 │   ├── DataAccess/CapturasDinamicas/        repositorios (SQL y mock) + Script_CapturaDinamica.sql
-│   ├── Views/CapturasDinamicas/             vistas y vistas parciales
+│   ├── Views/CapturasDinamicas/             11 archivos: 3 vistas + 8 vistas parciales (_*.cshtml)
 │   ├── CSS/Page2026/CapturasDinamicas/
 │   ├── Scripts/CapturasDinamicas/
 │   └── LEEME_CapturasDinamicas.md           referencia técnica del módulo
@@ -138,6 +143,11 @@ Sirve para ver el módulo funcionando sin tocar el portal.
   - Modifica una pregunta y **Guardar borrador** → como la versión 1 tiene respuestas, se crea la
     **Versión 2** en borrador (clic en el badge de versión para ver el historial).
   - **Resultados**: indicadores, barras, buscador de textos y matriz.
+- **Encuesta 4 "Seguimiento de visitas a clientes"** (campo llave + calendario):
+  - En **Captura/4** escribe `CLI-1005` y presiona **Buscar** (o Enter): se cargan las respuestas de su última visita.
+  - Escribe un número nuevo (ej. `CLI-9000`): aparece "será una captura nueva".
+  - Captura la **Fecha de la próxima cita** con hora y envía: se descarga el evento `.ics` para Outlook.
+  - En **Resultados** solo cuenta la última captura de cada cliente.
 - **Captura**: el usuario simulado puede responder la encuesta 1 una sola vez.
 - Los datos **sobreviven a reinicios**. Para volver al estado inicial: cierra IIS Express y ejecuta
   `ProyectoPrueba\CrearBaseLocalDB.ps1 -Recrear`.
@@ -157,7 +167,7 @@ Copia el contenido de **`Solution_Radar/`** sobre tu solución real, respetando 
 | `Controllers/CapturasDinamicasController.cs` | `Controllers/` |
 | `Models/ModuloDinamico/*` | `Models/ModuloDinamico/` |
 | `DataAccess/CapturasDinamicas/*.cs` (3 archivos) | `DataAccess/CapturasDinamicas/` |
-| `Views/CapturasDinamicas/*` | `Views/CapturasDinamicas/` |
+| `Views/CapturasDinamicas/*` (**11 archivos**: 3 vistas + 8 parciales) | `Views/CapturasDinamicas/` |
 | `CSS/Page2026/CapturasDinamicas/*` | `CSS/Page2026/CapturasDinamicas/` |
 | `Scripts/CapturasDinamicas/*` | `Scripts/CapturasDinamicas/` |
 
@@ -197,6 +207,35 @@ Producción, el módulo cambia también. **No** agregues `CapturaDinamica:Cargar
    - **Error "Invalid object name ..."** → faltan tablas: revisa el paso 3.
 
 Las vistas usan `Layout = "~/Views/Shared/_LayoutRadar2026.cshtml"`, el que ya existe en el portal.
+
+### Configurar el calendario de Outlook (preguntas de fecha)
+
+1. En el **Constructor**, selecciona o agrega una pregunta **Fecha**.
+2. Activa **"Permitir enviar al calendario de Outlook"** y define:
+   - **Pedir hora**: muestra "Hora (opcional)". Sin hora, la cita es de todo el día.
+   - **Título del evento**: si se deja vacío se usa el texto de la pregunta.
+   - **Duración** (solo si se pide hora). Siempre incluye un recordatorio 15 minutos antes.
+3. Quien responde ve la casilla **"Agregar a mi calendario de Outlook al enviar"** (marcada por defecto).
+   Al enviar se descarga `evento_calendario.ics`; al abrirlo, Outlook muestra la cita y se elige
+   **Guardar y cerrar**. Si el navegador bloquea la descarga, el mensaje final trae el botón
+   **"Descargar evento de nuevo"**.
+4. La hora se guarda junto con la respuesta (en `ValorTexto` de la fecha) y se recupera con el campo llave.
+
+### Configurar el campo llave
+
+1. En el **Constructor**, selecciona una pregunta **Texto libre** o **Número** (ej. "Número de cliente").
+2. Activa **"Campo llave"**. Solo puede haber uno por encuesta: si activas otro, el anterior se desactiva.
+   El campo llave queda **obligatorio** y como respuesta corta.
+3. Al capturar, junto al campo aparece **Buscar**. La búsqueda también se hace con Enter o al salir del campo:
+   - **Hay capturas** con ese valor → se cargan las respuestas de la **última** (de cualquier usuario y
+     versión de la encuesta). Al enviar se guarda como **captura nueva**; la anterior queda en el historial.
+     **Empezar en blanco** borra lo cargado y conserva la llave.
+   - **No hay capturas** → aviso de "será una captura nueva".
+4. La búsqueda ignora mayúsculas/minúsculas y espacios al inicio o al final (`cli-1003` = `CLI-1003`).
+5. Reglas de la encuesta con campo llave:
+   - Se permiten **varias capturas** por usuario; la opción "Una respuesta" no aplica.
+   - En **Resultados** se cuenta solo la **última captura de cada valor** (se indica cuántas capturas hay en total).
+   - Si la encuesta es **anónima**, la búsqueda muestra "Anónimo" en lugar del nombre de quien capturó.
 
 ---
 
@@ -248,7 +287,7 @@ en las tablas `portal.capturadinamica_*`.
 | `portal.capturadinamica_tp_encuesta` | Encuesta (Survey) |
 | `portal.capturadinamica_tp_encuestaversion` | Versión + configuración de publicación |
 | `portal.capturadinamica_tp_segmentacion` | Quién puede responder |
-| `portal.capturadinamica_tp_pregunta` | Preguntas |
+| `portal.capturadinamica_tp_pregunta` | Preguntas (incluye `PermitirCalendario`, `CalendarioPedirHora`, `CalendarioTitulo`, `CalendarioDuracion`, `EsLlave`) |
 | `portal.capturadinamica_tp_preguntaopcion` | Opciones, filas y columnas de matriz |
 | `portal.capturadinamica_tp_niveldependiente` | Niveles de la multiselección dependiente |
 | `portal.capturadinamica_tp_opciondependiente` | Opciones encadenadas |
@@ -276,7 +315,8 @@ en las tablas `portal.capturadinamica_*`.
 | `db7bfdc` | Conexión a SQL Server: `CapturaDinamicaRepositorioSql.cs` | Copiar los 3 `.cs` de `DataAccess/CapturasDinamicas/` y el controller; incluir el nuevo `.cs`; referencia `System.Configuration` |
 | `1b44ea1` | Conexión configurable (`CapturaDinamica:NombreConexion`) | Copiar el controller; agregar el appSetting con `CNN` |
 | `5205853` | Script SQL que se puede ejecutar varias veces | Volver a ejecutar el script en SSMS; no se copia código |
-| *(actual)* | Manuales actualizados | Nada |
+| `ede0525` | Manuales actualizados | Nada |
+| *(actual)* | **Calendario de Outlook en fechas + campo llave** | 1) Ejecutar de nuevo el script en SSMS (agrega 5 columnas a `tp_pregunta`, sin borrar datos). 2) Copiar **todo** `Solution_Radar/` excepto el `.sql` (cambió el controller, modelos, repositorios, vistas, CSS y JS). No hay archivos nuevos: no hay que incluir nada en el proyecto. |
 
 Para ver qué archivos cambiaron entre tu versión y la actual: `git log --stat` o la pestaña *Commits* en GitHub.
 
@@ -322,6 +362,18 @@ Para ver qué archivos cambiaron entre tu versión y la actual: `git log --stat`
 | 404 en `/Scripts/CapturasDinamicas/...` | Los archivos no se copiaron o no se incluyeron en el proyecto. |
 | Acordeones que se abren y cierran solos en otras pantallas | El `_LayoutRadar2026` carga jQuery y Bootstrap dos veces. El módulo ya está preparado; se recomienda dejar una sola copia de cada librería. |
 | El usuario sale como "Usuario de prueba" | No existe el objeto global `Token` en la página (lo crea `Scripts/Token/Page.js`). |
+| `Invalid column name 'EsLlave'` / `'PermitirCalendario'` | Falta actualizar la base: vuelve a ejecutar `Script_CapturaDinamica.sql` (agrega las columnas sin borrar datos). |
+| Después de actualizar no aparecen las opciones nuevas | El navegador usa los JS anteriores: recarga con **Ctrl + F5**. Las vistas ya piden `?v=1.1.0`. |
+
+### Calendario y campo llave
+
+| Síntoma | Solución |
+|---|---|
+| No se descarga el evento | El navegador bloqueó la descarga: usa el botón **Descargar evento de nuevo** del mensaje final. |
+| El `.ics` se descarga pero no abre en Outlook | Clic derecho al archivo → *Abrir con* → **Outlook**. En Outlook web: *Calendario → Agregar calendario → Cargar desde archivo*. |
+| La cita sale a otra hora | La hora se toma como hora local del equipo que abre el archivo. |
+| "La búsqueda por campo llave no está configurada" | La vista no tiene la URL `buscarPorLlave`: copia de nuevo `Editor.cshtml` y `_CapturaFormulario.cshtml`. |
+| En la vista previa del constructor la búsqueda pide guardar | La encuesta es nueva y no tiene Id todavía: guarda el borrador primero. |
 
 ---
 

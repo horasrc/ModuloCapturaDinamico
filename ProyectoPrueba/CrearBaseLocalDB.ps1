@@ -38,15 +38,11 @@ if ($existe -eq 0) {
     Ejecutar-Sql 'master' "CREATE DATABASE [$base]" | Out-Null
 }
 
-$tablas = Ejecutar-Sql $base "SELECT COUNT(*) FROM sys.tables WHERE name = 'capturadinamica_tp_encuesta'"
-if ($tablas -eq 0) {
-    Write-Host 'Creando tablas (Script_CapturaDinamica.sql)...'
-    $texto = [IO.File]::ReadAllText((Resolve-Path $script), [Text.Encoding]::UTF8)
-    $lotes = [regex]::Split($texto, '(?im)^\s*GO\s*$')
-    foreach ($lote in $lotes) {
-        if ($lote.Trim().Length -gt 0) { Ejecutar-Sql $base $lote | Out-Null }
-    }
-    Write-Host 'Tablas creadas. Las encuestas de ejemplo se cargan al abrir el módulo por primera vez.' -ForegroundColor Green
-} else {
-    Write-Host "La base $base ya existe con sus tablas." -ForegroundColor Green
+# El script es idempotente: crea lo que falte y agrega columnas nuevas sin borrar datos.
+Write-Host 'Aplicando Script_CapturaDinamica.sql (crea o actualiza tablas)...'
+$texto = [IO.File]::ReadAllText((Resolve-Path $script), [Text.Encoding]::UTF8)
+$lotes = [regex]::Split($texto, '(?im)^\s*GO\s*$')
+foreach ($lote in $lotes) {
+    if ($lote.Trim().Length -gt 0) { Ejecutar-Sql $base $lote | Out-Null }
 }
+Write-Host 'Base lista. Si está vacía, las encuestas de ejemplo se cargan al abrir el módulo.' -ForegroundColor Green

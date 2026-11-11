@@ -218,9 +218,33 @@ BEGIN
         EtiquetaMaximo    NVARCHAR(40)  NULL,
         FechaMinima       DATE          NULL,
         FechaMaxima       DATE          NULL,
+        PermitirCalendario  BIT          NOT NULL CONSTRAINT DF_cd_preg_cal DEFAULT(0),   -- fecha: enviar a Outlook (.ics)
+        CalendarioPedirHora BIT          NOT NULL CONSTRAINT DF_cd_preg_calhora DEFAULT(0),
+        CalendarioTitulo    NVARCHAR(150) NULL,
+        CalendarioDuracion  INT          NULL,                                             -- minutos
+        EsLlave             BIT          NOT NULL CONSTRAINT DF_cd_preg_llave DEFAULT(0), -- campo llave de búsqueda
         CONSTRAINT UQ_cd_pregunta_clave UNIQUE (IdVersion, Clave)
     );
     PRINT 'Creada capturadinamica_tp_pregunta';
+END
+GO
+
+-- Columnas agregadas en la versión 2 del módulo (calendario de Outlook y campo llave).
+-- Se agregan solo si la tabla ya existía sin ellas.
+IF COL_LENGTH(N'portal.capturadinamica_tp_pregunta', N'PermitirCalendario') IS NULL
+BEGIN
+    ALTER TABLE portal.capturadinamica_tp_pregunta ADD
+        PermitirCalendario  BIT           NOT NULL CONSTRAINT DF_cd_preg_cal DEFAULT(0),
+        CalendarioPedirHora BIT           NOT NULL CONSTRAINT DF_cd_preg_calhora DEFAULT(0),
+        CalendarioTitulo    NVARCHAR(150) NULL,
+        CalendarioDuracion  INT           NULL;
+    PRINT 'Agregadas columnas de calendario a capturadinamica_tp_pregunta';
+END
+IF COL_LENGTH(N'portal.capturadinamica_tp_pregunta', N'EsLlave') IS NULL
+BEGIN
+    ALTER TABLE portal.capturadinamica_tp_pregunta ADD
+        EsLlave BIT NOT NULL CONSTRAINT DF_cd_preg_llave DEFAULT(0);
+    PRINT 'Agregada columna EsLlave a capturadinamica_tp_pregunta';
 END
 GO
 
@@ -312,7 +336,7 @@ BEGIN
         ClavePregunta       VARCHAR(40)   NOT NULL,
         ClaveOpcion         VARCHAR(40)   NULL,   -- opción / columna de matriz / opción dependiente / '__otro'
         ClaveFila           VARCHAR(40)   NULL,   -- fila de matriz
-        ValorTexto          NVARCHAR(MAX) NULL,
+        ValorTexto          NVARCHAR(MAX) NULL,   -- texto libre, texto de "Otro" o la hora (HH:mm) de una fecha
         ValorNumero         DECIMAL(18,4) NULL,
         ValorFecha          DATE          NULL
     );

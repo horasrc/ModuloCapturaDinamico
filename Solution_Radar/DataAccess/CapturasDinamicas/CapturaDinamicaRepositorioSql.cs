@@ -146,7 +146,8 @@ namespace Solution_Radar.DataAccess.CapturasDinamicas
                     info.Mensaje = "La encuesta cerró el " + FechaTexto(pub.FechaCierre) + ".";
                     return info;
                 }
-                if (pub.RespuestaUnica && YaRespondio(cn, null, publicada.IdVersion, usuario))
+                // Con campo llave se permiten varias capturas (una por registro)
+                if (pub.RespuestaUnica && CampoLlave.Obtener(e) == null && YaRespondio(cn, null, publicada.IdVersion, usuario))
                 {
                     info.Mensaje = "Ya registraste tu respuesta a esta encuesta. ¡Gracias!";
                     return info;
@@ -157,6 +158,76 @@ namespace Solution_Radar.DataAccess.CapturasDinamicas
                 info.PuedeResponder = true;
                 info.Encuesta = e;
                 return info;
+            }
+        }
+
+        public BusquedaLlaveResultado BuscarPorLlave(int idEncuesta, string clavePregunta, string valor)
+        {
+            var res = new BusquedaLlaveResultado();
+            string buscado = CampoLlave.Normalizar(valor);
+            if (buscado == null || string.IsNullOrEmpty(clavePregunta)) { return res; }
+
+            using (var cn = Abrir())
+            {
+                // Valores de la llave en todas las versiones de la encuesta (de la más reciente a la más antigua).
+                // La comparación se hace en C# con CampoLlave.Normalizar para que sea igual que en el mock.
+                var candidatos = new List<long>();
+                var datos = new Dictionary<long, object[]>();
+                using (var cmd = Comando(cn, null, @"
+                    SELECT re.IdRespuesta, rp.ValorTexto, rp.ValorNumero, re.FechaRespuesta, re.NombreEmpleado, v.NumeroVersion, v.Anonima
+                    FROM portal.capturadinamica_tp_respuestaencuesta re
+                    JOIN portal.capturadinamica_tp_encuestaversion v ON v.IdVersion = re.IdVersion
+                    JOIN portal.capturadinamica_tp_respuestapregunta rp ON rp.IdRespuesta = re.IdRespuesta
+                    WHERE v.IdEncuesta = @E AND rp.ClavePregunta = @C
+                    ORDER BY re.IdRespuesta DESC",
+                    P("@E", idEncuesta), P("@C", clavePregunta)))
+                using (var r = cmd.ExecuteReader())
+                {
+                    while (r.Read())
+                    {
+                        string valorFila = r.IsDBNull(2)
+                            ? CampoLlave.Normalizar(Txt(r, 1))
+                            : CampoLlave.Normalizar(Convert.ToDecimal(r.GetValue(2)).ToString(CultureInfo.InvariantCulture));
+                        if (valorFila != buscado) { continue; }
+                        long id = r.GetInt64(0);
+                        candidatos.Add(id);
+                        if (candidatos.Count == 1)
+                        {
+                            datos[id] = new object[] { FechaHora(r, 3), Txt(r, 4), r.GetInt32(5), r.GetBoolean(6) };
+                        }
+                    }
+                }
+                if (candidatos.Count == 0) { return res; }
+
+                long ultima = candidatos[0];
+                var d = datos[ultima];
+                res.Encontrada = true;
+                res.IdRespuesta = (int)ultima;
+                res.FechaRespuesta = (string)d[0];
+                res.Usuario = (bool)d[3] ? "Anónimo" : (string)d[1];
+                res.NumeroVersion = (int)d[2];
+                res.TotalCapturas = candidatos.Count;
+
+                using (var cmd = Comando(cn, null, @"
+                    SELECT ClavePregunta, ClaveOpcion, ClaveFila, ValorTexto, ValorNumero, ValorFecha
+                    FROM portal.capturadinamica_tp_respuestapregunta WHERE IdRespuesta = @Id ORDER BY IdRespuestaPregunta",
+                    P("@Id", ultima)))
+                using (var r = cmd.ExecuteReader())
+                {
+                    while (r.Read())
+                    {
+                        res.Respuestas.Add(new RespuestaPregunta
+                        {
+                            ClavePregunta = Txt(r, 0),
+                            ClaveOpcion = Txt(r, 1),
+                            ClaveFila = Txt(r, 2),
+                            ValorTexto = Txt(r, 3),
+                            ValorNumero = Dec(r, 4),
+                            ValorFecha = Fecha(r, 5)
+                        });
+                    }
+                }
+                return res;
             }
         }
 
@@ -279,7 +350,7 @@ namespace Solution_Radar.DataAccess.CapturasDinamicas
                 {
                     return ResultadoOperacion.Error("La encuesta ya no está disponible para responder.");
                 }
-                if (version.Publicacion.RespuestaUnica && YaRespondio(cn, tx, respuesta.IdVersion, usuario))
+                if (version.Publicacion.RespuestaUnica && CampoLlave.Obtener(version) == null && YaRespondio(cn, tx, respuesta.IdVersion, usuario))
                 {
                     return ResultadoOperacion.Error("Ya registraste tu respuesta a esta encuesta.");
                 }
@@ -486,18 +557,22 @@ namespace Solution_Radar.DataAccess.CapturasDinamicas
                     INSERT INTO portal.capturadinamica_tp_pregunta
                         (IdVersion, Clave, Orden, IdTipoPregunta, Texto, Descripcion, Obligatoria, OrdenAleatorio, PermitirOtro, TextoLargo,
                          MinCaracteres, MaxCaracteres, MinSelecciones, MaxSelecciones, ValorMinimo, ValorMaximo, PermitirDecimales,
-                         EscalaMinimo, EscalaMaximo, EtiquetaMinimo, EtiquetaMaximo, FechaMinima, FechaMaxima)
+                         EscalaMinimo, EscalaMaximo, EtiquetaMinimo, EtiquetaMaximo, FechaMinima, FechaMaxima,
+                         PermitirCalendario, CalendarioPedirHora, CalendarioTitulo, CalendarioDuracion, EsLlave)
                     VALUES
                         (@IdVersion, @Clave, @Orden, @Tipo, @Texto, @Desc, @Obl, @Ale, @Otro, @Largo,
                          @MinC, @MaxC, @MinS, @MaxS, @MinV, @MaxV, @Dec,
-                         @EMin, @EMax, @EtMin, @EtMax, @FMin, @FMax);
+                         @EMin, @EMax, @EtMin, @EtMax, @FMin, @FMax,
+                         @Cal, @CalHora, @CalTitulo, @CalDur, @Llave);
                     SELECT CAST(SCOPE_IDENTITY() AS INT);",
                     P("@IdVersion", idVersion), P("@Clave", p.Clave), P("@Orden", orden), P("@Tipo", idTipo),
                     P("@Texto", p.Texto ?? ""), P("@Desc", p.Descripcion), P("@Obl", p.Obligatoria), P("@Ale", p.OrdenAleatorio),
                     P("@Otro", p.PermitirOtro), P("@Largo", p.TextoLargo), P("@MinC", p.MinCaracteres), P("@MaxC", p.MaxCaracteres),
                     P("@MinS", p.MinSelecciones), P("@MaxS", p.MaxSelecciones), P("@MinV", p.ValorMinimo), P("@MaxV", p.ValorMaximo),
                     P("@Dec", p.PermitirDecimales), P("@EMin", p.EscalaMinimo), P("@EMax", p.EscalaMaximo),
-                    P("@EtMin", p.EtiquetaMinimo), P("@EtMax", p.EtiquetaMaximo), P("@FMin", AFecha(p.FechaMinima)), P("@FMax", AFecha(p.FechaMaxima))));
+                    P("@EtMin", p.EtiquetaMinimo), P("@EtMax", p.EtiquetaMaximo), P("@FMin", AFecha(p.FechaMinima)), P("@FMax", AFecha(p.FechaMaxima)),
+                    P("@Cal", p.PermitirCalendario), P("@CalHora", p.CalendarioPedirHora), P("@CalTitulo", p.CalendarioTitulo),
+                    P("@CalDur", p.CalendarioDuracion), P("@Llave", p.EsLlave)));
 
                 InsertarOpciones(cn, tx, idPregunta, "O", p.Opciones);
                 InsertarOpciones(cn, tx, idPregunta, "F", p.Filas);
@@ -625,7 +700,8 @@ namespace Solution_Radar.DataAccess.CapturasDinamicas
 
                 SELECT p.IdPregunta, p.Clave, p.Orden, t.Clave AS Tipo, p.Texto, p.Descripcion, p.Obligatoria, p.OrdenAleatorio, p.PermitirOtro,
                        p.TextoLargo, p.MinCaracteres, p.MaxCaracteres, p.MinSelecciones, p.MaxSelecciones, p.ValorMinimo, p.ValorMaximo,
-                       p.PermitirDecimales, p.EscalaMinimo, p.EscalaMaximo, p.EtiquetaMinimo, p.EtiquetaMaximo, p.FechaMinima, p.FechaMaxima
+                       p.PermitirDecimales, p.EscalaMinimo, p.EscalaMaximo, p.EtiquetaMinimo, p.EtiquetaMaximo, p.FechaMinima, p.FechaMaxima,
+                       p.PermitirCalendario, p.CalendarioPedirHora, p.CalendarioTitulo, p.CalendarioDuracion, p.EsLlave
                 FROM portal.capturadinamica_tp_pregunta p
                 JOIN portal.capturadinamica_tc_tipopregunta t ON t.IdTipoPregunta = p.IdTipoPregunta
                 WHERE p.IdVersion = @Id ORDER BY p.Orden;
@@ -715,7 +791,12 @@ namespace Solution_Radar.DataAccess.CapturasDinamicas
                         EtiquetaMinimo = Txt(r, 19),
                         EtiquetaMaximo = Txt(r, 20),
                         FechaMinima = Fecha(r, 21),
-                        FechaMaxima = Fecha(r, 22)
+                        FechaMaxima = Fecha(r, 22),
+                        PermitirCalendario = r.GetBoolean(23),
+                        CalendarioPedirHora = r.GetBoolean(24),
+                        CalendarioTitulo = Txt(r, 25),
+                        CalendarioDuracion = Ent(r, 26),
+                        EsLlave = r.GetBoolean(27)
                     };
                     porId[r.GetInt32(0)] = p;
                     e.Preguntas.Add(p);

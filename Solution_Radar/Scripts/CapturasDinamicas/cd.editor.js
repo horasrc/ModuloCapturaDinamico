@@ -119,7 +119,9 @@
             MinCaracteres: null, MaxCaracteres: null, MinSelecciones: null, MaxSelecciones: null,
             ValorMinimo: null, ValorMaximo: null, PermitirDecimales: false,
             EscalaMinimo: null, EscalaMaximo: null, EtiquetaMinimo: '', EtiquetaMaximo: '',
-            FechaMinima: null, FechaMaxima: null
+            FechaMinima: null, FechaMaxima: null,
+            PermitirCalendario: false, CalendarioPedirHora: true, CalendarioTitulo: '', CalendarioDuracion: 60,
+            EsLlave: false
         });
         aplicarDefaultsTipo(p, null);
         return p;
@@ -137,6 +139,9 @@
         }
         if (!def.permiteOtro) { p.PermitirOtro = false; }
         if (!def.usaOpciones || def.opcionesFijas) { p.OrdenAleatorio = false; }
+        if (!puedeSerLlave(p.Tipo)) { p.EsLlave = false; }
+        if (p.Tipo !== 'fecha') { p.PermitirCalendario = false; }
+        if (p.Tipo === 'texto' && p.EsLlave) { p.TextoLargo = false; }
 
         if (p.Tipo === 'matriz') {
             if (p.Filas.length === 0) { p.Filas = opcionesTexto('f', ['Aspecto 1', 'Aspecto 2', 'Aspecto 3']); }
@@ -160,6 +165,34 @@
                 { Clave: util.clave('d'), Nivel: 2, ClavePadre: b, Texto: 'Opción B1' }
             ];
         }
+    }
+
+    /** Solo texto y número pueden ser campo llave. */
+    function puedeSerLlave(tipo) {
+        return tipo === 'texto' || tipo === 'numero';
+    }
+
+    function preguntaLlave() {
+        var lista = preguntas();
+        for (var i = 0; i < lista.length; i++) { if (lista[i].EsLlave) { return lista[i]; } }
+        return null;
+    }
+
+    /** Marca/desmarca el campo llave (solo uno por encuesta; queda obligatoria). */
+    function asignarLlave(p, activar) {
+        if (activar) {
+            var anterior = preguntaLlave();
+            if (anterior && anterior !== p) {
+                anterior.EsLlave = false;
+                ui.toast('P' + (indiceDe(anterior.Clave) + 1) + ' dejó de ser el campo llave; ahora es P' + (indiceDe(p.Clave) + 1) + '.', 'info');
+            }
+            p.EsLlave = true;
+            p.Obligatoria = true;
+            p.TextoLargo = false;
+        } else {
+            p.EsLlave = false;
+        }
+        renderNotaLlave();
     }
 
     function agregarPregunta(tipo) {
@@ -187,6 +220,7 @@
         var i;
         p.Clave = util.clave('q');
         p.Texto = (p.Texto || '') + ' (copia)';
+        p.EsLlave = false;      // solo puede haber un campo llave
         var listas = ['Opciones', 'Filas', 'Columnas', 'OpcionesDependientes'];
         for (var l = 0; l < listas.length; l++) {
             for (i = 0; i < p[listas[l]].length; i++) {
@@ -256,6 +290,17 @@
         renderPanel();
         renderPreviewPregunta();
         renderLogica();
+        renderNotaLlave();
+    }
+
+    /** Nota en Configuración cuando la encuesta tiene campo llave. */
+    function renderNotaLlave() {
+        var llave = preguntaLlave();
+        var $nota = $('#cdCfgNotaLlave');
+        if (!llave) { $nota.addClass('cd-oculto').html(''); return; }
+        $nota.removeClass('cd-oculto').html('<i class="bi bi-key me-1"></i>Esta encuesta tiene campo llave: <strong>P' + (indiceDe(llave.Clave) + 1) +
+            ' · ' + util.esc(llave.Texto || '(sin texto)') + '</strong>. Se permiten varias capturas (una nueva cada vez que se envía) ' +
+            'y en Resultados se cuenta solo la última captura de cada valor. La opción «Una respuesta» no aplica.');
     }
 
     function marcarSucio() {
@@ -347,7 +392,9 @@
             var t = CD.tipo(p.Tipo);
             var sel = p.Clave === S.sel;
             var badges = '';
+            if (p.EsLlave) { badges += '<span class="cd-badge cd-badge-llave" title="Campo llave"><i class="bi bi-key me-1"></i>Llave</span>'; }
             if (p.Obligatoria) { badges += '<span class="cd-badge cd-badge-obligatoria">Obligatoria</span>'; }
+            if (p.Tipo === 'fecha' && p.PermitirCalendario) { badges += '<span class="cd-badge cd-badge-calendario" title="Se puede enviar al calendario"><i class="bi bi-calendar-plus me-1"></i>Outlook</span>'; }
             if (p.Reglas.length) { badges += '<span class="cd-badge cd-badge-logica" title="Reglas de lógica"><i class="bi bi-signpost-split me-1"></i>' + p.Reglas.length + '</span>'; }
             if (dep[p.Clave]) { badges += '<span class="cd-badge cd-badge-depende"><i class="bi bi-eye me-1"></i>Depende de P' + dep[p.Clave].join(', P') + '</span>'; }
 
@@ -451,7 +498,41 @@
         var html = htmlSwitch('Obligatoria', 'Obligatoria', p.Obligatoria);
         if (t.usaOpciones && !t.opcionesFijas) { html += htmlSwitch('OrdenAleatorio', 'Orden aleatorio de opciones', p.OrdenAleatorio); }
         if (t.permiteOtro) { html += htmlSwitch('PermitirOtro', 'Permitir «Otro»', p.PermitirOtro, true); }
-        return '<div class="cd-switches">' + html + '</div>';
+        if (puedeSerLlave(p.Tipo)) {
+            html += htmlSwitch('EsLlave', '<i class="bi bi-key me-1"></i>Campo llave', p.EsLlave, true);
+        }
+        var nota = '';
+        if (p.EsLlave) {
+            nota = '<div class="small text-cd-muted mb-3" style="margin-top:-8px"><i class="bi bi-info-circle me-1"></i>' +
+                'Al capturar este dato se busca la última captura con el mismo valor y se cargan sus respuestas. ' +
+                'Solo puede haber un campo llave por encuesta y siempre es obligatorio.</div>';
+        }
+        return '<div class="cd-switches">' + html + '</div>' + nota;
+    }
+
+    /** Sección "Calendario de Outlook" de las preguntas de fecha. */
+    function htmlCalendario(p) {
+        var html = htmlSwitch('PermitirCalendario', '<i class="bi bi-calendar-plus me-1"></i>Permitir enviar al calendario de Outlook', p.PermitirCalendario, true);
+        if (!p.PermitirCalendario) {
+            return '<div class="cd-campo">' + html + '<div class="small text-cd-muted mt-1">Al enviar, quien responde puede descargar la fecha como cita para Outlook (.ics).</div></div>';
+        }
+        var duraciones = [[15, '15 minutos'], [30, '30 minutos'], [60, '1 hora'], [90, '1 hora 30 min'], [120, '2 horas'], [240, '4 horas']];
+        var opciones = '';
+        for (var i = 0; i < duraciones.length; i++) {
+            opciones += '<option value="' + duraciones[i][0] + '"' + ((p.CalendarioDuracion || 60) === duraciones[i][0] ? ' selected' : '') + '>' + duraciones[i][1] + '</option>';
+        }
+        html += '<div class="mt-2">' + htmlSwitch('CalendarioPedirHora', 'Pedir hora (opcional para quien responde)', p.CalendarioPedirHora, true) + '</div>' +
+            '<div class="row g-2 mt-1">' +
+            '<div class="col-md-8"><label class="small text-cd-muted">Título del evento</label>' +
+            '<input type="text" class="form-control form-control-sm" maxlength="150" data-campo="CalendarioTitulo" value="' + util.esc(p.CalendarioTitulo) +
+            '" placeholder="Si se deja vacío se usa el texto de la pregunta"></div>' +
+            (p.CalendarioPedirHora
+                ? '<div class="col-md-4"><label class="small text-cd-muted">Duración</label><select class="form-select form-select-sm" data-campo="CalendarioDuracion" data-valor="entero">' + opciones + '</select></div>'
+                : '') +
+            '</div><div class="small text-cd-muted mt-2">' +
+            (p.CalendarioPedirHora ? 'Si no capturan hora, la cita se crea como evento de todo el día.' : 'La cita se crea como evento de todo el día.') +
+            ' Incluye un recordatorio 15 minutos antes.</div>';
+        return '<div class="cd-campo border rounded p-3">' + html + '</div>';
     }
 
     /** Editor de una lista simple (Opciones, Filas o Columnas). */
@@ -491,6 +572,7 @@
                 break;
 
             case 'texto':
+                if (p.EsLlave) { html = ''; break; }    // el campo llave siempre es respuesta corta
                 html = '<div class="cd-campo"><label class="cd-label">Tipo de campo</label>' +
                     '<div class="btn-group" role="group">' +
                     '<button type="button" class="btn btn-sm ' + (!p.TextoLargo ? 'btn-dark' : 'btn-outline-dark') + '" data-cd-op="texto-largo" data-valor="0"><i class="bi bi-input-cursor me-1"></i>Respuesta corta</button>' +
@@ -528,6 +610,9 @@
                 break;
 
             case 'fecha':
+                html = htmlCalendario(p);
+                break;
+
             case 'numero':
                 html = '';
                 break;
@@ -891,6 +976,7 @@
         $('[data-cd-respuestas="' + (pub.RespuestaUnica ? '1' : '0') + '"]').addClass('activo');
         renderSegmentacion();
         sugerenciasSegmento();
+        renderNotaLlave();
     }
 
     function renderSegmentacion() {
@@ -1133,6 +1219,7 @@
             if (accion === 'bajar') { moverPregunta(clave, idx + 1); }
             if (accion === 'eliminar') { eliminarPregunta(clave); }
             if (accion === 'obligatoria') {
+                if (p.EsLlave && p.Obligatoria) { ui.toast('El campo llave siempre es obligatorio.', 'info'); return; }
                 p.Obligatoria = !p.Obligatoria;
                 marcarSucio();
                 refrescarTodoConstructor();
@@ -1196,9 +1283,17 @@
             var cambio = p[campo] !== valor;
             var repintar = $(this).attr('data-rerender') && e.type === 'change';
             if (!cambio && !repintar) { return; }   // 'input' y 'change' llegan juntos; se procesa una vez
-            p[campo] = valor;
+            if (campo === 'EsLlave') {
+                if (cambio) { asignarLlave(p, valor); }
+            } else if (campo === 'Obligatoria' && !valor && p.EsLlave) {
+                this.checked = true;
+                ui.toast('El campo llave siempre es obligatorio.', 'info');
+                return;
+            } else {
+                p[campo] = valor;
+            }
             marcarSucio();
-            if (repintar) { renderPanel(); }
+            if (repintar || campo === 'EsLlave') { renderPanel(); }
             renderLista();
             renderPreviewPregunta();
             if (campo === 'Texto') { renderLogica(); }

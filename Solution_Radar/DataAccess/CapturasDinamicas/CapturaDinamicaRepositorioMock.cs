@@ -186,7 +186,8 @@ namespace Solution_Radar.DataAccess.CapturasDinamicas
                     return info;
                 }
 
-                if (pub.RespuestaUnica && UsuarioYaRespondio(publicada.IdVersion, usuario))
+                // Con campo llave se permiten varias capturas (una por registro)
+                if (pub.RespuestaUnica && CampoLlave.Obtener(publicada) == null && UsuarioYaRespondio(publicada.IdVersion, usuario))
                 {
                     info.Mensaje = "Ya registraste tu respuesta a esta encuesta. ¡Gracias!";
                     return info;
@@ -198,6 +199,35 @@ namespace Solution_Radar.DataAccess.CapturasDinamicas
                 info.PuedeResponder = true;
                 info.Encuesta = ArmarEncuesta(a, publicada);
                 return info;
+            }
+        }
+
+        public BusquedaLlaveResultado BuscarPorLlave(int idEncuesta, string clavePregunta, string valor)
+        {
+            lock (_lock)
+            {
+                var res = new BusquedaLlaveResultado();
+                string buscado = CampoLlave.Normalizar(valor);
+                var a = BuscarEncuesta(idEncuesta);
+                if (a == null || buscado == null || string.IsNullOrEmpty(clavePregunta)) { return res; }
+
+                var coincidencias = _respuestas
+                    .Where(r => r.IdEncuesta == idEncuesta && CampoLlave.Valor(r, clavePregunta) == buscado)
+                    .OrderByDescending(r => r.IdRespuesta)
+                    .ToList();
+                if (coincidencias.Count == 0) { return res; }
+
+                var ultima = coincidencias[0];
+                var version = a.Versiones.FirstOrDefault(v => v.IdVersion == ultima.IdVersion);
+                bool anonima = version != null && version.Publicacion.Anonima;
+                res.Encontrada = true;
+                res.IdRespuesta = ultima.IdRespuesta;
+                res.NumeroVersion = version != null ? version.NumeroVersion : 0;
+                res.FechaRespuesta = ultima.FechaRespuesta;
+                res.Usuario = anonima ? "Anónimo" : ultima.NombreEmpleado;
+                res.TotalCapturas = coincidencias.Count;
+                res.Respuestas = Clonar(ultima.Respuestas);
+                return res;
             }
         }
 
@@ -328,7 +358,7 @@ namespace Solution_Radar.DataAccess.CapturasDinamicas
                 {
                     return ResultadoOperacion.Error("La encuesta ya no está disponible para responder.");
                 }
-                if (version.Publicacion.RespuestaUnica && UsuarioYaRespondio(version.IdVersion, usuario))
+                if (version.Publicacion.RespuestaUnica && CampoLlave.Obtener(version) == null && UsuarioYaRespondio(version.IdVersion, usuario))
                 {
                     return ResultadoOperacion.Error("Ya registraste tu respuesta a esta encuesta.");
                 }
@@ -666,6 +696,55 @@ namespace Solution_Radar.DataAccess.CapturasDinamicas
             e3.Versiones.Add(v3);
             _encuestas.Add(e3);
             GenerarRespuestas(e3.IdEncuesta, v3, 25, 77);
+
+            // ---------- Encuesta 4: captura con CAMPO LLAVE (número de cliente) ----------
+            var e4 = new EncuestaAlmacen
+            {
+                IdEncuesta = ++_seqEncuesta,
+                Nombre = "Seguimiento de visitas a clientes",
+                Descripcion = "Captura por cliente: al escribir el número de cliente se cargan los datos de su última visita.",
+                FechaModificacion = Fecha(-3) + " 12:20",
+                UsuarioModifica = "Administrador Portal"
+            };
+            var v4 = new EncuestaEditor
+            {
+                IdEncuesta = e4.IdEncuesta,
+                IdVersion = ++_seqVersion,
+                NumeroVersion = 1,
+                Nombre = e4.Nombre,
+                Estatus = CatalogoCapturaDinamica.EstatusPublicada,
+                FechaCreacion = Fecha(-10),
+                FechaPublicacion = Fecha(-9),
+                UsuarioCrea = "Administrador Portal",
+                PoblacionObjetivo = 30,
+                Publicacion = new PublicacionConfig
+                {
+                    FechaInicio = Fecha(-9),
+                    FechaCierre = Fecha(60),
+                    RespuestaUnica = false,
+                    Anonima = false,
+                    RequiereAutenticacion = true,
+                    MensajeInicial = "Escribe el número de cliente: si ya tiene visitas registradas se cargará la última para que la actualices.",
+                    MensajeFinal = "Visita registrada."
+                }
+            };
+            v4.Preguntas.Add(P("k1", 1, CatalogoCapturaDinamica.TipoTexto, "Número de cliente", true,
+                delegate(Pregunta p) { p.EsLlave = true; p.MaxCaracteres = 20; p.Descripcion = "Ejemplos con capturas previas: CLI-1001 a CLI-1012."; }));
+            v4.Preguntas.Add(P("k2", 2, CatalogoCapturaDinamica.TipoUnica, "Estatus de la visita", true,
+                delegate(Pregunta p) { p.Opciones = Ops("k2", "Interesado", "En evaluación", "Contratado", "Sin interés"); }));
+            v4.Preguntas.Add(P("k3", 3, CatalogoCapturaDinamica.TipoMultiple, "Productos presentados", false,
+                delegate(Pregunta p) { p.Opciones = Ops("k3", "Tarjeta de crédito", "Crédito sin garantía", "Inversiones", "Seguros"); }));
+            v4.Preguntas.Add(P("k4", 4, CatalogoCapturaDinamica.TipoFecha, "Fecha de la próxima cita", false,
+                delegate(Pregunta p)
+                {
+                    p.PermitirCalendario = true; p.CalendarioPedirHora = true;
+                    p.CalendarioTitulo = "Cita de seguimiento con cliente"; p.CalendarioDuracion = 60;
+                }));
+            v4.Preguntas.Add(P("k5", 5, CatalogoCapturaDinamica.TipoTexto, "Comentarios de la visita", false,
+                delegate(Pregunta p) { p.TextoLargo = true; p.MaxCaracteres = 500; }));
+            e4.Versiones.Add(v4);
+            _encuestas.Add(e4);
+            GenerarRespuestas(e4.IdEncuesta, v4, 20, 404);
         }
 
         /// <summary>Encuesta de ejemplo con TODOS los tipos de pregunta y lógica condicional.</summary>
@@ -678,7 +757,12 @@ namespace Solution_Radar.DataAccess.CapturasDinamicas
                 delegate(Pregunta p) { p.Opciones = Ops("p1", "Muy útil", "Útil", "Neutral", "Poco útil", "Nada útil"); }));
 
             // P2 - Fecha
-            lista.Add(P("p2", 2, CatalogoCapturaDinamica.TipoFecha, "¿Cuándo recibiste el material por primera vez?", false, null));
+            lista.Add(P("p2", 2, CatalogoCapturaDinamica.TipoFecha, "¿Cuándo te gustaría una sesión de seguimiento de la campaña?", false,
+                delegate(Pregunta p)
+                {
+                    p.PermitirCalendario = true; p.CalendarioPedirHora = true;
+                    p.CalendarioTitulo = "Seguimiento de campaña comercial"; p.CalendarioDuracion = 30;
+                }));
 
             // P3 - Selección múltiple con "Otro" y mín/máx
             lista.Add(P("p3", 3, CatalogoCapturaDinamica.TipoMultiple, "¿Qué materiales utilizaste en esta campaña?", true,
@@ -838,6 +922,13 @@ namespace Solution_Radar.DataAccess.CapturasDinamicas
                     if (ocultar.Contains(p.Clave)) { continue; }
                     if (!p.Obligatoria && rnd.Next(100) < 20) { continue; }
 
+                    if (p.EsLlave)
+                    {
+                        // 12 clientes distintos: varios tienen más de una captura (historial)
+                        Agregar(r, p.Clave, null, null, "CLI-" + (1001 + n % 12).ToString(CultureInfo.InvariantCulture), null, null);
+                        continue;
+                    }
+
                     string opcionElegida = GenerarRespuestaPregunta(p, r, rnd, comentarios);
 
                     foreach (var regla in p.Reglas)
@@ -905,8 +996,9 @@ namespace Solution_Radar.DataAccess.CapturasDinamicas
                     }
                 case CatalogoCapturaDinamica.TipoFecha:
                     {
-                        string f = Fecha(-rnd.Next(6, 12));
-                        Agregar(r, p.Clave, null, null, null, null, f);
+                        string f = p.PermitirCalendario ? Fecha(rnd.Next(1, 20)) : Fecha(-rnd.Next(6, 12));
+                        string hora = p.PermitirCalendario && p.CalendarioPedirHora ? rnd.Next(9, 18).ToString("00") + ":00" : null;
+                        Agregar(r, p.Clave, null, null, hora, null, f);     // la hora viaja en ValorTexto
                         return f;
                     }
                 case CatalogoCapturaDinamica.TipoMatriz:

@@ -17,7 +17,7 @@
     Layout = "~/Views/Shared/_LayoutRadar2026.cshtml";
 }
 
-<link href="@Url.Content("~/CSS/Page2026/CapturasDinamicas/CapturasDinamicas.css")?v=1.0.0" rel="stylesheet" />
+<link href="@Url.Content("~/CSS/Page2026/CapturasDinamicas/CapturasDinamicas.css")?v=1.1.0" rel="stylesheet" />
 
 <div class="cd-modulo" id="cdEditor">
 
@@ -42,11 +42,11 @@
     @Html.Partial("_EditorModales")
 </div>
 
-<script src="@Url.Content("~/Scripts/CapturasDinamicas/cd.core.js")?v=1.0.0"></script>
-<script src="@Url.Content("~/Scripts/CapturasDinamicas/cd.api.js")?v=1.0.0"></script>
-<script src="@Url.Content("~/Scripts/CapturasDinamicas/cd.renderer.js")?v=1.0.0"></script>
-<script src="@Url.Content("~/Scripts/CapturasDinamicas/cd.resultados.js")?v=1.0.0"></script>
-<script src="@Url.Content("~/Scripts/CapturasDinamicas/cd.editor.js")?v=1.0.0"></script>
+<script src="@Url.Content("~/Scripts/CapturasDinamicas/cd.core.js")?v=1.1.0"></script>
+<script src="@Url.Content("~/Scripts/CapturasDinamicas/cd.api.js")?v=1.1.0"></script>
+<script src="@Url.Content("~/Scripts/CapturasDinamicas/cd.renderer.js")?v=1.1.0"></script>
+<script src="@Url.Content("~/Scripts/CapturasDinamicas/cd.resultados.js")?v=1.1.0"></script>
+<script src="@Url.Content("~/Scripts/CapturasDinamicas/cd.editor.js")?v=1.1.0"></script>
 <script>
     CD.config.urls.obtenerEncuesta = '@Url.Action("ObtenerEncuesta", "CapturasDinamicas")';
     CD.config.urls.guardarBorrador = '@Url.Action("GuardarBorrador", "CapturasDinamicas")';
@@ -54,5 +54,7 @@
     CD.config.urls.cambiarEstatus = '@Url.Action("CambiarEstatus", "CapturasDinamicas")';
     CD.config.urls.obtenerResultados = '@Url.Action("ObtenerResultados", "CapturasDinamicas")';
     CD.config.urls.captura = '@Url.Action("Captura", "CapturasDinamicas", new { id = "" })';
+    CD.config.urls.buscarPorLlave = '@Url.Action("BuscarPorLlave", "CapturasDinamicas")';
+    CD.config.urls.calendario = '@Url.Action("DescargarCalendario", "CapturasDinamicas")';
     jQuery(function () { CD.Editor.init({ idEncuesta: @ViewBag.IdEncuesta }); });
 </script>

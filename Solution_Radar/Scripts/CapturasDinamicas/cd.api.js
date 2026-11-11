@@ -94,6 +94,27 @@
 
         guardarRespuesta: function (respuesta) {
             return llamar('guardarRespuesta', 'POST', paqueteUsuario({ datos: JSON.stringify(respuesta) }));
+        },
+
+        /** Última captura de la encuesta con ese valor en el campo llave. */
+        buscarPorLlave: function (idEncuesta, clavePregunta, valor) {
+            return llamar('buscarPorLlave', 'POST', paqueteUsuario({ id: idEncuesta, clave: clavePregunta, valor: valor }));
+        },
+
+        /** true si la pantalla tiene configurada la búsqueda por campo llave. */
+        puedeBuscarPorLlave: function () {
+            return !!CD.config.urls.buscarPorLlave;
+        },
+
+        /**
+         * URL del archivo .ics (calendario de Outlook) para una lista de eventos:
+         * [{ Titulo, Descripcion, Fecha: 'yyyy-MM-dd', Hora: 'HH:mm' | null, Duracion: minutos }]
+         * Regresa null si la URL no está configurada.
+         */
+        urlCalendario: function (eventos) {
+            if (!CD.config.urls.calendario || !eventos || !eventos.length) { return null; }
+            return CD.config.urls.calendario + '?eventos=' + encodeURIComponent(JSON.stringify(eventos)) +
+                '&_=' + new Date().getTime();
         }
     };
 

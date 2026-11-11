@@ -1,5 +1,8 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Configuration;
+using System.Globalization;
+using System.Text;
 using System.Web.Mvc;
 using System.Web.Script.Serialization;
 using Solution_Radar.DataAccess.CapturasDinamicas;
@@ -196,6 +199,104 @@ namespace Solution_Radar.Controllers
             {
                 return _repositorio.GuardarRespuesta(Deserializar<RespuestaEncuesta>(datos), LeerUsuario(usuario));
             });
+        }
+
+        /// <summary>Última captura de la encuesta cuyo campo llave tenga el valor indicado.</summary>
+        [HttpPost]
+        [ValidateInput(false)]
+        public ActionResult BuscarPorLlave(int id, string clave, string valor)
+        {
+            return Ejecutar(delegate
+            {
+                return ResultadoOperacion.Ok(_repositorio.BuscarPorLlave(id, clave, valor), null);
+            });
+        }
+
+        // ==================================================================
+        //  CALENDARIO DE OUTLOOK (.ics)
+        // ==================================================================
+
+        /// <summary>
+        /// Regresa un archivo .ics con los eventos indicados (JSON: lista de EventoCalendario).
+        /// Outlook (y cualquier calendario) lo abre para agregar la cita.
+        /// No depende de la base de datos.
+        /// </summary>
+        [HttpGet]
+        [ValidateInput(false)]
+        public ActionResult DescargarCalendario(string eventos)
+        {
+            List<EventoCalendario> lista;
+            try
+            {
+                lista = Deserializar<List<EventoCalendario>>(eventos) ?? new List<EventoCalendario>();
+            }
+            catch
+            {
+                return new HttpStatusCodeResult(400, "Eventos no válidos");
+            }
+
+            var ics = new StringBuilder();
+            ics.Append("BEGIN:VCALENDAR\r\n");
+            ics.Append("VERSION:2.0\r\n");
+            ics.Append("PRODID:-//Portal Radar//Captura Dinamica//ES\r\n");
+            ics.Append("CALSCALE:GREGORIAN\r\n");
+            ics.Append("METHOD:PUBLISH\r\n");
+
+            int agregados = 0;
+            foreach (var ev in lista)
+            {
+                if (agregados >= 20) { break; }
+                DateTime fecha;
+                if (!DateTime.TryParseExact(ev.Fecha, "yyyy-MM-dd", CultureInfo.InvariantCulture, DateTimeStyles.None, out fecha)) { continue; }
+
+                ics.Append("BEGIN:VEVENT\r\n");
+                ics.Append("UID:" + Guid.NewGuid().ToString("N") + "@capturadinamica\r\n");
+                ics.Append("DTSTAMP:" + DateTime.UtcNow.ToString("yyyyMMdd'T'HHmmss'Z'", CultureInfo.InvariantCulture) + "\r\n");
+
+                DateTime hora;
+                bool conHora = !string.IsNullOrEmpty(ev.Hora) &&
+                               DateTime.TryParseExact(ev.Hora, "HH:mm", CultureInfo.InvariantCulture, DateTimeStyles.None, out hora);
+                if (conHora)
+                {
+                    // Hora local (sin zona): Outlook la toma en la zona horaria del equipo
+                    var inicio = fecha.Add(DateTime.ParseExact(ev.Hora, "HH:mm", CultureInfo.InvariantCulture).TimeOfDay);
+                    int minutos = ev.Duracion.HasValue && ev.Duracion.Value > 0 ? Math.Min(ev.Duracion.Value, 24 * 60) : 60;
+                    ics.Append("DTSTART:" + inicio.ToString("yyyyMMdd'T'HHmmss", CultureInfo.InvariantCulture) + "\r\n");
+                    ics.Append("DTEND:" + inicio.AddMinutes(minutos).ToString("yyyyMMdd'T'HHmmss", CultureInfo.InvariantCulture) + "\r\n");
+                }
+                else
+                {
+                    // Evento de todo el día
+                    ics.Append("DTSTART;VALUE=DATE:" + fecha.ToString("yyyyMMdd", CultureInfo.InvariantCulture) + "\r\n");
+                    ics.Append("DTEND;VALUE=DATE:" + fecha.AddDays(1).ToString("yyyyMMdd", CultureInfo.InvariantCulture) + "\r\n");
+                    ics.Append("X-MICROSOFT-CDO-ALLDAYEVENT:TRUE\r\n");
+                }
+                ics.Append("SUMMARY:" + EscaparIcs(string.IsNullOrWhiteSpace(ev.Titulo) ? "Evento" : ev.Titulo) + "\r\n");
+                if (!string.IsNullOrWhiteSpace(ev.Descripcion)) { ics.Append("DESCRIPTION:" + EscaparIcs(ev.Descripcion) + "\r\n"); }
+                ics.Append("TRANSP:OPAQUE\r\n");
+                ics.Append("BEGIN:VALARM\r\nTRIGGER:-PT15M\r\nACTION:DISPLAY\r\nDESCRIPTION:Recordatorio\r\nEND:VALARM\r\n");
+                ics.Append("END:VEVENT\r\n");
+                agregados++;
+            }
+            ics.Append("END:VCALENDAR\r\n");
+
+            if (agregados == 0) { return new HttpStatusCodeResult(400, "Sin eventos"); }
+
+            Response.Cache.SetCacheability(System.Web.HttpCacheability.NoCache);
+            var bytes = new UTF8Encoding(false).GetBytes(ics.ToString());
+            return File(bytes, "text/calendar; charset=utf-8", "evento_calendario.ics");
+        }
+
+        /// <summary>Escapa texto para iCalendar (RFC 5545).</summary>
+        private static string EscaparIcs(string texto)
+        {
+            return (texto ?? "")
+                .Replace("\\", "\\\\")
+                .Replace(";", "\\;")
+                .Replace(",", "\\,")
+                .Replace("\r\n", "\\n")
+                .Replace("\n", "\\n")
+                .Replace("\r", "");
         }
 
         // ==================================================================

@@ -107,6 +107,7 @@
             (p.Obligatoria ? '<span class="cd-requerido">*</span>' : '') + '</span></div>' +
             (p.Descripcion ? '<div class="cd-form-desc">' + util.esc(p.Descripcion) + '</div>' : this.htmlAyuda(p)) +
             '<div class="cd-form-control">' + this.htmlControl(p) + '</div>' +
+            (p.EsLlave && !this.op.soloPreguntas ? '<div class="cd-llave-estado">' + this.htmlEstadoLlave() + '</div>' : '') +
             '<div class="cd-form-error"></div>' +
             '</div>';
     };
@@ -205,10 +206,185 @@
         var r = this.respuestas[p.Clave] || {};
         var max = p.MaxCaracteres ? ' maxlength="' + p.MaxCaracteres + '"' : '';
         var valor = util.esc(r.texto || '');
-        var control = p.TextoLargo
+        var control = p.TextoLargo && !p.EsLlave
             ? '<textarea class="form-control" rows="3"' + max + ' data-cd-q="' + util.esc(p.Clave) + '" data-cd-texto="1" placeholder="Escribe tu respuesta">' + valor + '</textarea>'
-            : '<input type="text" class="form-control"' + max + ' data-cd-q="' + util.esc(p.Clave) + '" data-cd-texto="1" placeholder="Escribe tu respuesta" value="' + valor + '">';
+            : '<input type="text" class="form-control"' + max + ' data-cd-q="' + util.esc(p.Clave) + '" data-cd-texto="1"' +
+              (p.EsLlave ? ' data-cd-llave="1" autocomplete="off"' : '') + ' placeholder="Escribe tu respuesta" value="' + valor + '">';
+        if (p.EsLlave) { return this.envolverLlave(p, control); }
         return control + '<div class="cd-contador-car" data-cd-contador="' + util.esc(p.Clave) + '">' + this.textoContador(p, (r.texto || '').length) + '</div>';
+    };
+
+    // ==================================================================
+    //  CAMPO LLAVE: buscar la última captura con el mismo valor
+    // ==================================================================
+
+    /** Agrega el botón "Buscar" junto al control del campo llave. */
+    Renderer.prototype.envolverLlave = function (p, control) {
+        if (this.op.soloPreguntas) {
+            return control + '<div class="small text-cd-muted mt-1"><i class="bi bi-key me-1"></i>Campo llave: al capturarlo se busca la última captura con ese valor.</div>';
+        }
+        return '<div class="input-group" style="max-width:420px">' + control +
+            '<button type="button" class="btn btn-cd-borde" data-cd-buscar-llave="' + util.esc(p.Clave) + '">' +
+            '<i class="bi bi-search me-1"></i>Buscar</button></div>';
+    };
+
+    /** Aviso que se muestra bajo el campo llave según el resultado de la búsqueda. */
+    Renderer.prototype.htmlEstadoLlave = function () {
+        var e = this.estadoLlave;
+        if (!e) {
+            return '<div class="small text-cd-muted mt-2"><i class="bi bi-key me-1"></i>Al capturar este dato se buscará su última captura.</div>';
+        }
+        if (e.tipo === 'buscando') {
+            return '<div class="small text-cd-muted mt-2"><span class="spinner-border spinner-border-sm me-1"></span>Buscando capturas anteriores...</div>';
+        }
+        if (e.tipo === 'encontrada') {
+            return '<div class="cd-llave-aviso encontrada mt-2"><i class="bi bi-arrow-repeat me-1"></i>' +
+                'Se cargó la última captura de <strong>' + util.esc(e.valor) + '</strong>: ' + util.fecha(e.fecha) +
+                (e.usuario ? ' · ' + util.esc(e.usuario) : '') +
+                (e.total > 1 ? ' · ' + e.total + ' capturas en total' : '') +
+                '.<br>Revisa y envía para guardarla como una <strong>nueva captura</strong> (la anterior queda en el historial).' +
+                '<div class="mt-2"><button type="button" class="btn btn-sm btn-cd-borde" data-cd-limpiar-llave="1">' +
+                '<i class="bi bi-eraser me-1"></i>Empezar en blanco</button></div></div>';
+        }
+        if (e.tipo === 'limpia') {
+            return '<div class="cd-llave-aviso nueva mt-2"><i class="bi bi-eraser me-1"></i>Captura en blanco para <strong>' +
+                util.esc(e.valor) + '</strong>. Al enviar se guardará como una nueva captura.</div>';
+        }
+        if (e.tipo === 'nueva') {
+            return '<div class="cd-llave-aviso nueva mt-2"><i class="bi bi-plus-circle me-1"></i>No hay capturas con <strong>' +
+                util.esc(e.valor) + '</strong>: será una captura nueva.</div>';
+        }
+        return '<div class="cd-llave-aviso error mt-2"><i class="bi bi-exclamation-triangle me-1"></i>' + util.esc(e.mensaje) + '</div>';
+    };
+
+    Renderer.prototype.pintarEstadoLlave = function (clave) {
+        jQuery('[data-cd-pregunta="' + clave + '"] .cd-llave-estado', this.$c).html(this.htmlEstadoLlave());
+    };
+
+    /** Valor capturado en el campo llave (texto). */
+    Renderer.prototype.valorLlave = function (p) {
+        var r = this.respuestas[p.Clave] || {};
+        var v = p.Tipo === 'numero' ? r.crudo : r.texto;
+        return util.vacio(v) ? '' : String(v).replace(/^\s+|\s+$/g, '');
+    };
+
+    /** Busca la última captura con el valor del campo llave y carga sus respuestas. */
+    Renderer.prototype.buscarLlave = function (clave) {
+        var self = this;
+        var p = this.mapa[clave];
+        if (!p || !p.EsLlave || this.op.soloPreguntas) { return; }
+        var valor = this.valorLlave(p);
+        if (!valor || valor === this.ultimaLlaveBuscada) { return; }
+        this.ultimaLlaveBuscada = valor;
+
+        if (!CD.api || !CD.api.puedeBuscarPorLlave()) {
+            this.estadoLlave = { tipo: 'error', mensaje: 'La búsqueda por campo llave no está configurada en esta pantalla.' };
+            this.pintarEstadoLlave(clave);
+            return;
+        }
+        if (!this.encuesta.IdEncuesta) {
+            this.estadoLlave = { tipo: 'error', mensaje: 'Guarda la encuesta para poder buscar capturas.' };
+            this.pintarEstadoLlave(clave);
+            return;
+        }
+
+        this.estadoLlave = { tipo: 'buscando' };
+        this.pintarEstadoLlave(clave);
+
+        CD.api.buscarPorLlave(this.encuesta.IdEncuesta, clave, valor)
+            .done(function (res) {
+                if (self.valorLlave(p) !== valor) { return; }   // el usuario cambió el valor mientras se buscaba
+                if (res && res.Encontrada) {
+                    self.cargarRespuestas(res.Respuestas, clave);
+                    self.estadoLlave = { tipo: 'encontrada', valor: valor, fecha: res.FechaRespuesta, usuario: res.Usuario, total: res.TotalCapturas };
+                    self.render();     // vuelve a pintar todo con las respuestas cargadas
+                } else {
+                    self.estadoLlave = { tipo: 'nueva', valor: valor };
+                    self.pintarEstadoLlave(clave);
+                }
+            })
+            .fail(function (msg) {
+                self.ultimaLlaveBuscada = null;
+                self.estadoLlave = { tipo: 'error', mensaje: msg };
+                self.pintarEstadoLlave(clave);
+            });
+    };
+
+    /**
+     * Convierte las filas guardadas (RespuestaPregunta) al estado interno del formulario.
+     * Ignora preguntas u opciones que ya no existan en esta versión.
+     * La pregunta claveConservar (campo llave) se deja como la capturó el usuario.
+     */
+    Renderer.prototype.cargarRespuestas = function (filas, claveConservar) {
+        var nuevas = {};
+        if (claveConservar && this.respuestas[claveConservar]) { nuevas[claveConservar] = this.respuestas[claveConservar]; }
+
+        for (var i = 0; i < (filas || []).length; i++) {
+            var f = filas[i];
+            var p = this.mapa[f.ClavePregunta];
+            if (!p || f.ClavePregunta === claveConservar) { continue; }
+            var r = nuevas[p.Clave] || (nuevas[p.Clave] = {});
+            var existeOpcion = f.ClaveOpcion && (util.buscar(p.Opciones, 'Clave', f.ClaveOpcion) || (f.ClaveOpcion === OTRO && p.PermitirOtro));
+
+            switch (p.Tipo) {
+                case 'unica':
+                case 'desplegable':
+                case 'sino':
+                    if (existeOpcion) {
+                        r.opcion = f.ClaveOpcion;
+                        if (f.ClaveOpcion === OTRO) { r.otro = f.ValorTexto || ''; }
+                    }
+                    break;
+                case 'multiple':
+                    if (existeOpcion) {
+                        r.opciones = r.opciones || [];
+                        r.opciones.push(f.ClaveOpcion);
+                        if (f.ClaveOpcion === OTRO) { r.otro = f.ValorTexto || ''; }
+                    }
+                    break;
+                case 'texto':
+                    r.texto = f.ValorTexto || '';
+                    break;
+                case 'escala':
+                case 'numero':
+                    if (f.ValorNumero !== null && f.ValorNumero !== undefined) {
+                        r.numero = Number(f.ValorNumero);
+                        r.crudo = String(Number(f.ValorNumero));
+                    }
+                    break;
+                case 'fecha':
+                    r.fecha = f.ValorFecha ? String(f.ValorFecha).substring(0, 10) : null;
+                    if (f.ValorTexto) { r.hora = f.ValorTexto; }
+                    break;
+                case 'matriz':
+                    if (util.buscar(p.Filas, 'Clave', f.ClaveFila) && util.buscar(p.Columnas, 'Clave', f.ClaveOpcion)) {
+                        r.filas = r.filas || {};
+                        r.filas[f.ClaveFila] = f.ClaveOpcion;
+                    }
+                    break;
+                case 'dependiente':
+                    var od = util.buscar(p.OpcionesDependientes, 'Clave', f.ClaveOpcion);
+                    if (od) {
+                        r.niveles = r.niveles || {};
+                        r.niveles[od.Nivel] = r.niveles[od.Nivel] || [];
+                        r.niveles[od.Nivel].push(od.Clave);
+                    }
+                    break;
+            }
+        }
+        this.respuestas = nuevas;
+    };
+
+    /** Quita las respuestas cargadas y deja solo el campo llave. */
+    Renderer.prototype.limpiarCapturaCargada = function () {
+        var llave = null;
+        var preguntas = this.encuesta.Preguntas || [];
+        for (var i = 0; i < preguntas.length; i++) { if (preguntas[i].EsLlave) { llave = preguntas[i].Clave; } }
+        var conservar = {};
+        if (llave && this.respuestas[llave]) { conservar[llave] = this.respuestas[llave]; }
+        this.respuestas = conservar;
+        this.estadoLlave = { tipo: 'limpia', valor: llave ? this.valorLlave(this.mapa[llave]) : '' };
+        this.render();
     };
 
     Renderer.prototype.textoContador = function (p, largo) {
@@ -236,9 +412,25 @@
 
     Renderer.prototype.htmlFecha = function (p) {
         var r = this.respuestas[p.Clave] || {};
-        return '<input type="date" class="form-control" style="max-width:260px" placeholder="aaaa-mm-dd" data-cd-q="' + util.esc(p.Clave) +
+        var clave = util.esc(p.Clave);
+        var html = '<input type="date" class="form-control" style="max-width:260px" placeholder="aaaa-mm-dd" data-cd-q="' + clave +
             '" data-cd-fecha="1"' + (p.FechaMinima ? ' min="' + p.FechaMinima + '"' : '') + (p.FechaMaxima ? ' max="' + p.FechaMaxima + '"' : '') +
             ' value="' + util.esc(r.fecha || '') + '">';
+
+        if (p.PermitirCalendario) {
+            if (p.CalendarioPedirHora) {
+                html += '<div class="d-flex align-items-center mt-2"><label class="small text-cd-muted me-2 mb-0" for="cdHora_' + this.nombreGrupo(p) + '">Hora (opcional)</label>' +
+                    '<input type="time" class="form-control form-control-sm" style="max-width:140px" id="cdHora_' + this.nombreGrupo(p) + '"' +
+                    ' placeholder="hh:mm" data-cd-q="' + clave + '" data-cd-hora="1" value="' + util.esc(r.hora || '') + '"></div>';
+            }
+            // Por defecto marcada (r.calendario === undefined)
+            var marcado = r.calendario !== false;
+            html += '<div class="form-check mt-2"><input class="form-check-input" type="checkbox" id="cdCal_' + this.nombreGrupo(p) + '"' +
+                ' data-cd-q="' + clave + '" data-cd-calendario="1"' + (marcado ? ' checked' : '') + '>' +
+                '<label class="form-check-label" for="cdCal_' + this.nombreGrupo(p) + '"><i class="bi bi-calendar-plus me-1"></i>' +
+                'Agregar a mi calendario de Outlook al enviar</label></div>';
+        }
+        return html;
     };
 
     Renderer.prototype.htmlNumero = function (p) {
@@ -251,10 +443,12 @@
         } else if (p.ValorMaximo !== null && p.ValorMaximo !== undefined) {
             rango = 'Valor máximo ' + p.ValorMaximo;
         }
-        return '<input type="number" class="form-control" style="max-width:220px" step="' + (p.PermitirDecimales ? 'any' : '1') + '"' +
+        var input = '<input type="number" class="form-control"' + (p.EsLlave ? ' data-cd-llave="1"' : ' style="max-width:220px"') +
+            ' step="' + (p.PermitirDecimales ? 'any' : '1') + '"' +
             (p.ValorMinimo !== null && p.ValorMinimo !== undefined ? ' min="' + p.ValorMinimo + '"' : '') +
             (p.ValorMaximo !== null && p.ValorMaximo !== undefined ? ' max="' + p.ValorMaximo + '"' : '') +
-            ' data-cd-q="' + util.esc(p.Clave) + '" data-cd-numero="1" value="' + util.esc(r.crudo !== undefined ? r.crudo : '') + '">' +
+            ' data-cd-q="' + util.esc(p.Clave) + '" data-cd-numero="1" value="' + util.esc(r.crudo !== undefined ? r.crudo : '') + '">';
+        return (p.EsLlave ? this.envolverLlave(p, input) : input) +
             (rango ? '<div class="small text-cd-muted mt-1">' + rango + '</div>' : '');
     };
 
@@ -401,7 +595,7 @@
         });
 
         // Checkboxes: selección múltiple
-        $c.on('change.cdr', 'input[type=checkbox][data-cd-q]:not([data-cd-dep])', function () {
+        $c.on('change.cdr', 'input[type=checkbox][data-cd-q]:not([data-cd-dep]):not([data-cd-calendario])', function () {
             var clave = jQuery(this).attr('data-cd-q');
             var p = self.mapa[clave];
             var $grupo = jQuery('input[name="' + this.name + '"]', $c);
@@ -490,6 +684,35 @@
             self.podarDependiente(self.mapa[clave], r);
             jQuery('[data-cd-pregunta="' + clave + '"] .cd-form-control', $c).html(self.htmlDependiente(self.mapa[clave]));
             self.alCambiar(clave);
+        });
+
+        // Fecha: hora opcional y casilla de calendario de Outlook
+        $c.on('change.cdr input.cdr', '[data-cd-hora]', function () {
+            self.resp(jQuery(this).attr('data-cd-q')).hora = this.value || null;
+        });
+        $c.on('change.cdr', '[data-cd-calendario]', function () {
+            self.resp(jQuery(this).attr('data-cd-q')).calendario = this.checked;
+        });
+
+        // Campo llave: buscar con el botón, con Enter o al salir del campo
+        $c.on('click.cdr', '[data-cd-buscar-llave]', function (e) {
+            e.preventDefault();
+            var clave = jQuery(this).attr('data-cd-buscar-llave');
+            self.ultimaLlaveBuscada = null;      // el botón siempre vuelve a buscar
+            self.buscarLlave(clave);
+        });
+        $c.on('keydown.cdr', '[data-cd-llave]', function (e) {
+            if (e.which === 13) {
+                e.preventDefault();
+                self.buscarLlave(jQuery(this).attr('data-cd-q'));
+            }
+        });
+        $c.on('change.cdr', '[data-cd-llave]', function () {
+            self.buscarLlave(jQuery(this).attr('data-cd-q'));
+        });
+        $c.on('click.cdr', '[data-cd-limpiar-llave]', function (e) {
+            e.preventDefault();
+            self.limpiarCapturaCargada();
         });
 
         // Enviar
@@ -750,6 +973,7 @@
                 if (!/^\d{4}-\d{2}-\d{2}$/.test(r.fecha)) { return 'Ingresa la fecha con formato aaaa-mm-dd.'; }
                 if (p.FechaMinima && r.fecha < p.FechaMinima) { return 'La fecha debe ser a partir del ' + util.fecha(p.FechaMinima) + '.'; }
                 if (p.FechaMaxima && r.fecha > p.FechaMaxima) { return 'La fecha debe ser hasta el ' + util.fecha(p.FechaMaxima) + '.'; }
+                if (r.hora && !/^\d{2}:\d{2}$/.test(r.hora)) { return 'Ingresa la hora con formato hh:mm (24 horas).'; }
                 break;
             case 'matriz':
                 var faltan = 0;
@@ -847,7 +1071,8 @@
                     fila(p.Clave, null, null, null, r.numero);
                     break;
                 case 'fecha':
-                    fila(p.Clave, null, null, null, null, r.fecha);
+                    // La hora (opcional, para el calendario) viaja en ValorTexto
+                    fila(p.Clave, null, null, p.PermitirCalendario && p.CalendarioPedirHora ? r.hora : null, null, r.fecha);
                     break;
                 case 'matriz':
                     for (k in r.filas) { if (r.filas.hasOwnProperty(k)) { fila(p.Clave, r.filas[k], k); } }
@@ -880,14 +1105,65 @@
             .html(enviando ? '<span class="spinner-border spinner-border-sm me-1"></span>Enviando...' : '<i class="bi bi-send me-1"></i>Enviar respuestas');
     };
 
+    /**
+     * Eventos para el calendario de Outlook: preguntas de fecha visibles, con calendario
+     * habilitado, fecha capturada y la casilla "Agregar a mi calendario" marcada.
+     */
+    Renderer.prototype.eventosCalendario = function () {
+        var eventos = [];
+        var preguntas = this.encuesta.Preguntas || [];
+        var vis = this.calcularVisibilidad().visibles;
+        for (var i = 0; i < preguntas.length; i++) {
+            var p = preguntas[i];
+            var r = this.respuestas[p.Clave];
+            if (p.Tipo !== 'fecha' || !p.PermitirCalendario || vis[p.Clave] === false) { continue; }
+            if (!r || !r.fecha || r.calendario === false) { continue; }
+            eventos.push({
+                Titulo: !util.vacio(p.CalendarioTitulo) ? p.CalendarioTitulo : p.Texto,
+                Descripcion: (this.encuesta.Nombre || '') + (this.encuesta.Nombre ? ' - ' : '') + (p.Texto || ''),
+                Fecha: r.fecha,
+                Hora: p.CalendarioPedirHora && r.hora ? r.hora : null,
+                Duracion: p.CalendarioDuracion || 60
+            });
+        }
+        return eventos;
+    };
+
+    /** Descarga el .ics con un iframe oculto (no cambia de página). */
+    Renderer.prototype.descargarCalendario = function (url) {
+        if (!url) { return; }
+        var $f = jQuery('#cdIframeCalendario');
+        if ($f.length === 0) {
+            $f = jQuery('<iframe id="cdIframeCalendario" style="display:none" title="calendario"></iframe>').appendTo('body');
+        }
+        $f.attr('src', url);
+    };
+
     Renderer.prototype.mostrarFinal = function (mensaje) {
         this.enviado = true;
+        var eventos = this.eventosCalendario();
+        var urlCal = CD.api && CD.api.urlCalendario ? CD.api.urlCalendario(eventos) : null;
+
+        var calendario = '';
+        if (urlCal) {
+            calendario = '<div class="cd-calendario-aviso mt-3"><i class="bi bi-calendar-plus me-1"></i>' +
+                'Se descargó el evento para tu calendario. Ábrelo y elige <strong>Guardar y cerrar</strong> en Outlook.' +
+                '<div class="mt-2"><a class="btn btn-sm btn-cd-borde" href="' + util.esc(urlCal) + '">' +
+                '<i class="bi bi-download me-1"></i>Descargar evento de nuevo</a></div></div>';
+        }
+        var tieneLlave = false;
+        var preguntas = this.encuesta.Preguntas || [];
+        for (var i = 0; i < preguntas.length; i++) { if (preguntas[i].EsLlave) { tieneLlave = true; } }
+
         var extra = this.op.modo === 'preview'
             ? '<div class="small text-cd-muted mt-2">(Vista previa: no se guardó ninguna respuesta)</div>' +
               '<button type="button" class="btn btn-cd-borde btn-sm mt-3 cd-reiniciar-preview"><i class="bi bi-arrow-counterclockwise me-1"></i>Volver a probar</button>'
-            : '';
+            : (tieneLlave
+                ? '<button type="button" class="btn btn-cd-rojo mt-3 cd-reiniciar-preview"><i class="bi bi-plus-lg me-1"></i>Capturar otro registro</button>'
+                : '');
         this.$c.html('<div class="cd-form-final"><i class="bi bi-check-circle"></i><h4 class="mt-2">' +
-            util.esc(mensaje || '¡Gracias por tu respuesta!') + '</h4>' + extra + '</div>');
+            util.esc(mensaje || '¡Gracias por tu respuesta!') + '</h4>' + calendario + extra + '</div>');
+        this.descargarCalendario(urlCal);
         var self = this;
         this.$c.off('click.cdrf').on('click.cdrf', '.cd-reiniciar-preview', function () { self.reiniciar(); });
         jQuery('html, body').animate({ scrollTop: Math.max(0, this.$c.offset().top - 90) }, 200);
@@ -896,6 +1172,8 @@
     Renderer.prototype.reiniciar = function () {
         this.respuestas = {};
         this.enviado = false;
+        this.estadoLlave = null;
+        this.ultimaLlaveBuscada = null;
         this.render();
     };
 

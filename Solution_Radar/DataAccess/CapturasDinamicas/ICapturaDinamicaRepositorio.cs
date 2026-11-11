@@ -45,6 +45,12 @@ namespace Solution_Radar.DataAccess.CapturasDinamicas
 
         /// <summary>Guarda la respuesta del usuario.</summary>
         ResultadoOperacion GuardarRespuesta(RespuestaEncuesta respuesta, UsuarioToken usuario);
+
+        /// <summary>
+        /// Busca en todas las versiones de la encuesta la ÚLTIMA captura cuyo campo llave
+        /// (pregunta con clave clavePregunta) tenga el valor indicado.
+        /// </summary>
+        BusquedaLlaveResultado BuscarPorLlave(int idEncuesta, string clavePregunta, string valor);
     }
 
     /// <summary>Datos de ejemplo de una encuesta (para sembrar una base de pruebas).</summary>

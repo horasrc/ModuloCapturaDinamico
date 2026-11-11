@@ -52,6 +52,13 @@
             kpi(util.fecha(res.FechaCierre) || '—', 'Fecha de cierre', 'bi-calendar-check') +
             '</div>';
 
+        if (res.ConCampoLlave) {
+            html += '<div class="cd-llave-aviso encontrada mb-3" style="max-width:none"><i class="bi bi-key me-1"></i>' +
+                'Encuesta con campo llave (<strong>' + util.esc(res.TextoCampoLlave) + '</strong>): los resultados toman solo la ' +
+                '<strong>última captura de cada valor</strong>. ' + res.TotalRespuestas + ' registros únicos de ' +
+                res.CapturasTotales + ' capturas en total.</div>';
+        }
+
         if (res.TotalRespuestas === 0) {
             html += '<div class="cd-card"><div class="cd-vacio"><i class="bi bi-bar-chart"></i>Esta versión todavía no tiene respuestas.</div></div>';
             $c.html(html);

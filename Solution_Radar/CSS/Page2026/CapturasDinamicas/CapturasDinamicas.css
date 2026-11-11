@@ -540,6 +540,31 @@
 .cd-modulo .movil .cd-form-error { margin-left: 0; }
 .cd-modulo .movil .cd-form-pregunta { padding: 14px; }
 
+/* Campo llave: avisos de búsqueda */
+.cd-modulo .cd-llave-aviso {
+    border-radius: 8px;
+    padding: 10px 12px;
+    font-size: 13px;
+    max-width: 620px;
+}
+.cd-modulo .cd-llave-aviso.encontrada { background: #eef6ff; border: 1px solid #b8d4f5; color: #0f3d6e; }
+.cd-modulo .cd-llave-aviso.nueva { background: #f3f4f6; border: 1px solid #e3e5e8; color: #1d1d1f; }
+.cd-modulo .cd-llave-aviso.error { background: #fff5f5; border: 1px solid #f3b6ba; color: #db0011; }
+.cd-modulo .cd-badge-llave { background: #fff8e1; color: #6b5300; border-color: #f2d68a; }
+.cd-modulo .cd-badge-calendario { background: #eef6ff; color: #0f3d6e; border-color: #b8d4f5; }
+
+/* Calendario de Outlook: aviso en el mensaje final */
+.cd-modulo .cd-calendario-aviso {
+    background: #eef6ff;
+    border: 1px solid #b8d4f5;
+    color: #0f3d6e;
+    border-radius: 8px;
+    padding: 10px 14px;
+    font-size: 13.5px;
+    display: inline-block;
+    text-align: left;
+}
+
 /* ---------- Resultados ---------- */
 .cd-modulo .cd-kpi {
     background: #fff;

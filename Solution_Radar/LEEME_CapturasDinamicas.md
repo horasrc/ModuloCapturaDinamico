@@ -19,11 +19,18 @@ Solution_Radar
 │       ├── CapturaDinamicaRepositorioMock.cs(datos de ejemplo en memoria)
 │       └── Script_CapturaDinamica.sql       (tablas portal.capturadinamica_*; se ejecuta en SSMS)
 ├── Views
-│   └── CapturasDinamicas
-│       ├── Administrador.cshtml   -> _ListadoEncuestas.cshtml
-│       ├── Editor.cshtml          -> _EditorEncabezado, _EditorConstructor, _EditorConfiguracion,
-│       │                             _EditorVistaPrevia, _EditorResultados, _EditorModales
-│       └── Captura.cshtml         -> _CapturaFormulario.cshtml
+│   └── CapturasDinamicas                    (11 archivos: copiar TODOS)
+│       ├── Administrador.cshtml             vista principal: listado de encuestas
+│       ├── _ListadoEncuestas.cshtml           parcial que usa Administrador
+│       ├── Editor.cshtml                    vista principal: constructor de la encuesta
+│       ├── _EditorEncabezado.cshtml           parcial que usa Editor (nombre, estatus, botones, pestañas)
+│       ├── _EditorConstructor.cshtml          parcial que usa Editor (lista, panel, tipos de pregunta)
+│       ├── _EditorConfiguracion.cshtml        parcial que usa Editor (publicación y segmentación)
+│       ├── _EditorVistaPrevia.cshtml          parcial que usa Editor (Desktop / Tablet / Móvil)
+│       ├── _EditorResultados.cshtml           parcial que usa Editor (resultados)
+│       ├── _EditorModales.cshtml              parcial que usa Editor (modales e historial de versiones)
+│       ├── Captura.cshtml                   vista principal: pantalla del usuario final
+│       └── _CapturaFormulario.cshtml          parcial que usa Captura
 ├── CSS
 │   └── Page2026
 │       └── CapturasDinamicas
@@ -65,7 +72,26 @@ o `@Html.Action("CapturaParcial", "CapturasDinamicas", new { id = 1 })`.
 - JavaScript en ES5 (sin flechas, `let/const`, template strings ni `Promise`).
 - C# compatible con C# 5 (sin interpolación `$""`, `?.` ni `nameof`).
 
-## 4. Base de datos
+## 4. Funciones especiales
+
+### Fecha → calendario de Outlook
+- Configuración por pregunta de fecha: `PermitirCalendario`, `CalendarioPedirHora`, `CalendarioTitulo`, `CalendarioDuracion`.
+- Al enviar, `cd.renderer.js` (`eventosCalendario`) arma los eventos de las fechas visibles con la casilla
+  marcada y descarga el `.ics` desde `GET /CapturasDinamicas/DescargarCalendario?eventos=[...]`
+  (el controller genera el iCalendar; no usa la base). Sin hora → evento de todo el día.
+- La hora capturada se guarda en `ValorTexto` de la respuesta de la fecha.
+
+### Campo llave
+- `Pregunta.EsLlave` (solo texto o número, uno por encuesta, obligatorio).
+- `POST /CapturasDinamicas/BuscarPorLlave (id, clave, valor)` → `BusquedaLlaveResultado` con la última
+  captura de **todas las versiones** de la encuesta cuyo valor coincida (`CampoLlave.Normalizar`:
+  ignora mayúsculas y espacios; en números ignora ceros decimales).
+- `cd.renderer.js` (`buscarLlave` / `cargarRespuestas`) carga las respuestas e ignora preguntas u opciones
+  que ya no existan en la versión actual.
+- Con campo llave no aplica "una respuesta por usuario" y `CapturaDinamicaResultadosServicio` cuenta solo
+  la última captura de cada valor.
+
+## 5. Base de datos
 
 `CapturaDinamicaRepositorioSql.cs` implementa el repositorio con ADO.NET contra las tablas
 `portal.capturadinamica_*`, con las mismas reglas de negocio que el mock:

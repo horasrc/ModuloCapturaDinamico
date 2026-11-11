@@ -200,6 +200,16 @@ namespace Solution_Radar.Models.ModuloDinamico
         public string FechaMinima { get; set; }
         public string FechaMaxima { get; set; }
 
+        // Fecha -> calendario de Outlook (archivo .ics al enviar)
+        public bool PermitirCalendario { get; set; }
+        public bool CalendarioPedirHora { get; set; }
+        public string CalendarioTitulo { get; set; }       // vacío = texto de la pregunta
+        public int? CalendarioDuracion { get; set; }       // minutos (solo si se captura hora)
+
+        // Campo llave (solo texto o número; uno por encuesta).
+        // Al capturarlo se busca la última captura con el mismo valor y se cargan sus respuestas.
+        public bool EsLlave { get; set; }
+
         // Opción única / múltiple / desplegable / sí-no
         public List<OpcionPregunta> Opciones { get; set; }
         // Matriz
@@ -306,5 +316,73 @@ namespace Solution_Radar.Models.ModuloDinamico
         public bool PuedeResponder { get; set; }
         public string Mensaje { get; set; }
         public EncuestaEditor Encuesta { get; set; }
+    }
+
+    /// <summary>Resultado de buscar la última captura por el valor del campo llave.</summary>
+    public class BusquedaLlaveResultado
+    {
+        public bool Encontrada { get; set; }
+        public int IdRespuesta { get; set; }
+        public int NumeroVersion { get; set; }
+        public string FechaRespuesta { get; set; }
+        public string Usuario { get; set; }          // "Anónimo" si la encuesta es anónima
+        public int TotalCapturas { get; set; }       // cuántas capturas hay con ese valor
+        public List<RespuestaPregunta> Respuestas { get; set; }
+
+        public BusquedaLlaveResultado()
+        {
+            Respuestas = new List<RespuestaPregunta>();
+        }
+    }
+
+    /// <summary>Evento para el archivo de calendario (.ics).</summary>
+    public class EventoCalendario
+    {
+        public string Titulo { get; set; }
+        public string Descripcion { get; set; }
+        public string Fecha { get; set; }       // yyyy-MM-dd
+        public string Hora { get; set; }        // HH:mm o null = todo el día
+        public int? Duracion { get; set; }      // minutos
+    }
+
+    /// <summary>Reglas comunes del campo llave.</summary>
+    public static class CampoLlave
+    {
+        /// <summary>Pregunta llave de la versión (null si no tiene).</summary>
+        public static Pregunta Obtener(EncuestaEditor e)
+        {
+            if (e == null || e.Preguntas == null) { return null; }
+            foreach (var p in e.Preguntas)
+            {
+                if (p.EsLlave) { return p; }
+            }
+            return null;
+        }
+
+        /// <summary>Valor normalizado de la llave dentro de una respuesta (null si no la contestó).</summary>
+        public static string Valor(RespuestaEncuesta r, string clavePregunta)
+        {
+            if (r == null || r.Respuestas == null || clavePregunta == null) { return null; }
+            foreach (var rp in r.Respuestas)
+            {
+                if (rp.ClavePregunta != clavePregunta) { continue; }
+                if (rp.ValorNumero.HasValue) { return Normalizar(rp.ValorNumero.Value.ToString(System.Globalization.CultureInfo.InvariantCulture)); }
+                return Normalizar(rp.ValorTexto);
+            }
+            return null;
+        }
+
+        /// <summary>Quita espacios y ceros decimales sobrantes y pasa a mayúsculas para comparar.</summary>
+        public static string Normalizar(string valor)
+        {
+            if (string.IsNullOrWhiteSpace(valor)) { return null; }
+            string v = valor.Trim();
+            decimal d;
+            if (decimal.TryParse(v, System.Globalization.NumberStyles.Number, System.Globalization.CultureInfo.InvariantCulture, out d))
+            {
+                return d.ToString("0.############", System.Globalization.CultureInfo.InvariantCulture);
+            }
+            return v.ToUpperInvariant();
+        }
     }
 }

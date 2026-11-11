@@ -26,6 +26,9 @@ namespace Solution_Radar.Models.ModuloDinamico
         public int Pendientes { get; set; }
         public string FechaInicio { get; set; }
         public string FechaCierre { get; set; }
+        public bool ConCampoLlave { get; set; }           // true = solo cuenta la última captura de cada llave
+        public string TextoCampoLlave { get; set; }
+        public int CapturasTotales { get; set; }          // capturas antes de quitar repetidas por llave
         public List<VersionResumen> VersionesConRespuestas { get; set; }
         public List<ResultadoPregunta> Preguntas { get; set; }
 
@@ -118,6 +121,20 @@ namespace Solution_Radar.Models.ModuloDinamico
             res.Anonima = def.Publicacion != null && def.Publicacion.Anonima;
             res.FechaInicio = def.Publicacion != null ? def.Publicacion.FechaInicio : null;
             res.FechaCierre = def.Publicacion != null ? def.Publicacion.FechaCierre : null;
+            res.CapturasTotales = respuestas.Count;
+
+            // Con campo llave: solo la última captura de cada valor (las anteriores son historial)
+            var llave = CampoLlave.Obtener(def);
+            if (llave != null)
+            {
+                res.ConCampoLlave = true;
+                res.TextoCampoLlave = llave.Texto;
+                var sinLlave = respuestas.Where(r => CampoLlave.Valor(r, llave.Clave) == null);
+                var ultimas = respuestas.Where(r => CampoLlave.Valor(r, llave.Clave) != null)
+                                        .GroupBy(r => CampoLlave.Valor(r, llave.Clave))
+                                        .Select(g => g.OrderByDescending(r => r.IdRespuesta).First());
+                respuestas = ultimas.Concat(sinLlave).ToList();
+            }
             res.TotalRespuestas = respuestas.Count;
             res.PoblacionObjetivo = def.PoblacionObjetivo;
 
