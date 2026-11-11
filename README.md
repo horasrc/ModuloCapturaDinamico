@@ -316,7 +316,7 @@ en las tablas `portal.capturadinamica_*`.
 | `1b44ea1` | Conexión configurable (`CapturaDinamica:NombreConexion`) | Copiar el controller; agregar el appSetting con `CNN` |
 | `5205853` | Script SQL que se puede ejecutar varias veces | Volver a ejecutar el script en SSMS; no se copia código |
 | `ede0525` | Manuales actualizados | Nada |
-| *(actual)* | **Calendario de Outlook en fechas + campo llave** | 1) Ejecutar de nuevo el script en SSMS (agrega 5 columnas a `tp_pregunta`, sin borrar datos). 2) Copiar **todo** `Solution_Radar/` excepto el `.sql` (cambió el controller, modelos, repositorios, vistas, CSS y JS). No hay archivos nuevos: no hay que incluir nada en el proyecto. |
+| `14f9f42` | **Calendario de Outlook en fechas + campo llave** | 1) Ejecutar de nuevo el script en SSMS (agrega 5 columnas a `tp_pregunta`, sin borrar datos). 2) Copiar **todo** `Solution_Radar/` excepto el `.sql` (cambió el controller, modelos, repositorios, vistas, CSS y JS). No hay archivos nuevos: no hay que incluir nada en el proyecto. |
 
 Para ver qué archivos cambiaron entre tu versión y la actual: `git log --stat` o la pestaña *Commits* en GitHub.
 
