@@ -95,6 +95,31 @@ namespace Solution_Radar.Controllers
             return PartialView("_ListadoEncuestas");
         }
 
+        /// <summary>
+        /// Constructor completo sin layout (para cargarlo por AJAX).
+        /// pestana (opcional): constructor | configuracion | preview | resultados.
+        ///     $('#contenedor').load('/CapturasDinamicas/EditorParcial/5?pestana=resultados');
+        /// </summary>
+        public ActionResult EditorParcial(int id, string pestana)
+        {
+            ViewBag.IdEncuesta = id;
+            ViewBag.Pestana = PestanaValida(pestana);
+            return PartialView("_Editor");
+        }
+
+        /// <summary>Solo se aceptan nombres de pestaña conocidos (el valor se escribe dentro de un script).</summary>
+        private static string PestanaValida(string pestana)
+        {
+            switch ((pestana ?? "").Trim().ToLowerInvariant())
+            {
+                case "constructor": return "constructor";
+                case "configuracion": return "configuracion";
+                case "preview": return "preview";
+                case "resultados": return "resultados";
+                default: return "";
+            }
+        }
+
         public ActionResult CapturaParcial(int id)
         {
             ViewBag.IdEncuesta = id;

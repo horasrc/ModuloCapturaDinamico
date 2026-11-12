@@ -33,6 +33,25 @@
         return CD.config.urls.editor + '/' + id + (hash ? '#' + hash : '');
     }
 
+    /** Atributos de un enlace al editor (href normal + datos para abrirlo por AJAX). */
+    function enlaceEditor(id, pestana) {
+        return 'href="' + urlEditor(id, pestana) + '" data-cd-abrir-editor="' + id + '"' +
+            (pestana ? ' data-cd-pestana="' + pestana + '"' : '');
+    }
+
+    /**
+     * Abre el constructor. Si el portal definió CD.config.abrirEditor(id, pestana)
+     * (por ejemplo, para cargar /CapturasDinamicas/EditorParcial por AJAX) se usa esa
+     * función; si no, se navega a la página /CapturasDinamicas/Editor/{id}.
+     */
+    function abrirEditor(id, pestana) {
+        if (typeof CD.config.abrirEditor === 'function') {
+            CD.config.abrirEditor(id, pestana || null);
+        } else {
+            window.location.href = urlEditor(id, pestana);
+        }
+    }
+
     function render() {
         var filas = '';
         var visibles = 0;
@@ -51,7 +70,7 @@
             }
 
             filas += '<tr>' +
-                '<td><a class="cd-nombre" href="' + urlEditor(e.IdEncuesta) + '">' + util.esc(e.Nombre) + '</a>' +
+                '<td><a class="cd-nombre" ' + enlaceEditor(e.IdEncuesta) + '>' + util.esc(e.Nombre) + '</a>' +
                 (e.Descripcion ? '<div class="small text-cd-muted">' + util.esc(e.Descripcion) + '</div>' : '') + '</td>' +
                 '<td>' + ui.badgeEstatus(e.Estatus) + '</td>' +
                 '<td class="text-nowrap">' + version + '</td>' +
@@ -60,8 +79,8 @@
                 '<td class="small text-nowrap">' + (e.FechaInicio ? util.fecha(e.FechaInicio) + ' – ' + util.fecha(e.FechaCierre) : '—') + '</td>' +
                 '<td class="small text-cd-muted">' + util.fecha(e.FechaModificacion) + '<br>' + util.esc(e.UsuarioModifica) + '</td>' +
                 '<td class="text-end text-nowrap">' +
-                '<a class="btn btn-sm btn-cd-borde me-1" href="' + urlEditor(e.IdEncuesta) + '" title="Editar"><i class="bi bi-pencil"></i></a>' +
-                '<a class="btn btn-sm btn-cd-borde me-1" href="' + urlEditor(e.IdEncuesta, 'resultados') + '" title="Resultados"><i class="bi bi-bar-chart"></i></a>' +
+                '<a class="btn btn-sm btn-cd-borde me-1" ' + enlaceEditor(e.IdEncuesta) + ' title="Editar"><i class="bi bi-pencil"></i></a>' +
+                '<a class="btn btn-sm btn-cd-borde me-1" ' + enlaceEditor(e.IdEncuesta, 'resultados') + ' title="Resultados"><i class="bi bi-bar-chart"></i></a>' +
                 (e.Estatus === 'Publicada' ? '<a class="btn btn-sm btn-cd-borde" href="' + CD.config.urls.captura + '/' + e.IdEncuesta + '" target="_blank" title="Abrir captura"><i class="bi bi-box-arrow-up-right"></i></a>' : '') +
                 '</td></tr>';
         }
@@ -88,7 +107,13 @@
         $('#cdBtnCrearEncuesta').prop('disabled', true);
         CD.api.crearEncuesta(nombre, $.trim($('#cdNuevaDescripcion').val()))
             .done(function (e) {
-                window.location.href = urlEditor(e.IdEncuesta);
+                ui.modal('cdModalNuevaEncuesta', 'hide');
+                // Espera a que termine la animación del modal antes de reemplazar el contenido
+                setTimeout(function () {
+                    $('.modal-backdrop').remove();
+                    $('body').removeClass('modal-open').css({ overflow: '', paddingRight: '' });
+                    abrirEditor(e.IdEncuesta);
+                }, 400);
             })
             .fail(function (msg) { ui.toast(msg, 'error'); })
             .always(function () { $('#cdBtnCrearEncuesta').prop('disabled', false); });
@@ -116,6 +141,13 @@
             setTimeout(function () { $('#cdNuevaNombre').trigger('focus'); }, 300);
         });
         $d.on('click.cdListado', '#cdBtnCrearEncuesta', crear);
+        // Abrir el editor: por AJAX si el portal definió CD.config.abrirEditor; si no, enlace normal
+        $d.on('click.cdListado', '[data-cd-abrir-editor]', function (e) {
+            if (typeof CD.config.abrirEditor !== 'function') { return; }   // deja que el enlace navegue
+            if (e.ctrlKey || e.metaKey || e.shiftKey || e.which === 2) { return; }   // abrir en otra pestaña
+            e.preventDefault();
+            abrirEditor(parseInt($(this).attr('data-cd-abrir-editor'), 10), $(this).attr('data-cd-pestana'));
+        });
         $d.on('keydown.cdListado', '#cdNuevaNombre', function (e) { if (e.which === 13) { crear(); } });
     }
 

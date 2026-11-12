@@ -40,17 +40,22 @@
     // ==================================================================
     //  INICIO Y CARGA
     // ==================================================================
+    /**
+     * cfg: { idEncuesta, pestana }
+     *   pestana (opcional): 'constructor' | 'configuracion' | 'preview' | 'resultados'.
+     *   Si no viene, se toma del hash de la URL (Editor/5#resultados).
+     */
     function init(cfg) {
         S.id = cfg.idEncuesta;
-        // Permite abrir directo una pestaña: Editor/5#resultados
-        S.tabInicial = (window.location.hash || '').replace('#', '');
+        S.tabInicial = cfg.pestana || (window.location.hash || '').replace('#', '');
         enlazarEventos();
         renderTipos();
         cargar(null);
 
-        // Aviso al salir con cambios sin guardar
+        // Aviso al salir con cambios sin guardar (solo si el editor sigue en pantalla:
+        // si se cargó por AJAX y luego se reemplazó, ya no debe avisar)
         window.onbeforeunload = function () {
-            if (S.sucio) { return 'Tienes cambios sin guardar.'; }
+            if (S.sucio && document.getElementById('cdEditor')) { return 'Tienes cambios sin guardar.'; }
         };
     }
 
@@ -1162,23 +1167,39 @@
     // ==================================================================
     //  EVENTOS
     // ==================================================================
+    /**
+     * Todos los eventos usan el namespace ".cdEditor" y se quitan antes de registrarse:
+     * si la parcial _Editor se carga varias veces por AJAX, no se duplican.
+     */
     function enlazarEventos() {
         var $d = $(document);
+        $d.off('.cdEditor');
+
+        // ---------- Regresar al listado ----------
+        // Si el portal define CD.config.abrirListado (carga por AJAX), se usa en lugar del enlace.
+        $d.on('click.cdEditor', '[data-cd-volver-listado]', function (e) {
+            if (typeof CD.config.abrirListado === 'function') {
+                e.preventDefault();
+                if (S.sucio && !window.confirm('Tienes cambios sin guardar. ¿Salir del constructor?')) { return; }
+                S.sucio = false;
+                CD.config.abrirListado();
+            }
+        });
 
         // ---------- Encabezado ----------
-        $d.on('click', '.cd-tab[data-cd-tab]', function () { mostrarTab($(this).attr('data-cd-tab')); });
-        $d.on('click', '#cdBtnVistaPrevia', function () { mostrarTab('preview'); });
-        $d.on('click', '#cdBtnGuardar', guardar);
-        $d.on('click', '#cdBtnPublicar', publicar);
-        $d.on('click', '#cdBadgeVersion', function () { renderVersiones(); ui.offcanvas('cdOffcanvasVersiones', 'show'); });
-        $d.on('click', '[data-cd-abrir-version]', function () { abrirVersion(parseInt($(this).attr('data-cd-abrir-version'), 10)); });
+        $d.on('click.cdEditor', '.cd-tab[data-cd-tab]', function () { mostrarTab($(this).attr('data-cd-tab')); });
+        $d.on('click.cdEditor', '#cdBtnVistaPrevia', function () { mostrarTab('preview'); });
+        $d.on('click.cdEditor', '#cdBtnGuardar', guardar);
+        $d.on('click.cdEditor', '#cdBtnPublicar', publicar);
+        $d.on('click.cdEditor', '#cdBadgeVersion', function () { renderVersiones(); ui.offcanvas('cdOffcanvasVersiones', 'show'); });
+        $d.on('click.cdEditor', '[data-cd-abrir-version]', function () { abrirVersion(parseInt($(this).attr('data-cd-abrir-version'), 10)); });
 
-        $d.on('click', '#cdBtnEditarNombre', function () {
+        $d.on('click.cdEditor', '#cdBtnEditarNombre', function () {
             $('#cdInputNombre').val(S.encuesta.Nombre);
             ui.modal('cdModalNombre', 'show');
             setTimeout(function () { $('#cdInputNombre').trigger('focus').trigger('select'); }, 300);
         });
-        $d.on('click', '#cdBtnGuardarNombre', function () {
+        $d.on('click.cdEditor', '#cdBtnGuardarNombre', function () {
             var nombre = $.trim($('#cdInputNombre').val());
             if (!nombre) { ui.toast('El nombre es obligatorio.', 'error'); return; }
             S.encuesta.Nombre = nombre;
@@ -1186,9 +1207,9 @@
             renderEncabezado();
             ui.modal('cdModalNombre', 'hide');
         });
-        $d.on('keydown', '#cdInputNombre', function (e) { if (e.which === 13) { $('#cdBtnGuardarNombre').trigger('click'); } });
+        $d.on('keydown.cdEditor', '#cdInputNombre', function (e) { if (e.which === 13) { $('#cdBtnGuardarNombre').trigger('click'); } });
 
-        $d.on('click', '[data-cd-accion]', function () {
+        $d.on('click.cdEditor', '[data-cd-accion]', function () {
             var accion = $(this).attr('data-cd-accion');
             if (accion === 'historial') { renderVersiones(); ui.offcanvas('cdOffcanvasVersiones', 'show'); }
             if (accion === 'captura') { window.open(CD.config.urls.captura + '/' + S.id, '_blank'); }
@@ -1198,15 +1219,15 @@
         });
 
         // ---------- Agregar pregunta ----------
-        $d.on('click', '#cdBtnAgregarPregunta, [data-cd-abrir-tipos]', function () { ui.modal('cdModalTipos', 'show'); });
-        $d.on('click', '[data-cd-agregar-tipo]', function () { agregarPregunta($(this).attr('data-cd-agregar-tipo')); });
+        $d.on('click.cdEditor', '#cdBtnAgregarPregunta, [data-cd-abrir-tipos]', function () { ui.modal('cdModalTipos', 'show'); });
+        $d.on('click.cdEditor', '[data-cd-agregar-tipo]', function () { agregarPregunta($(this).attr('data-cd-agregar-tipo')); });
 
         // ---------- Lista de preguntas ----------
-        $d.on('click', '.cd-item-pregunta', function (e) {
+        $d.on('click.cdEditor', '.cd-item-pregunta', function (e) {
             if ($(e.target).closest('.cd-menu').length) { return; }
             seleccionar($(this).attr('data-clave'));
         });
-        $d.on('click', '[data-cd-item]', function (e) {
+        $d.on('click.cdEditor', '[data-cd-item]', function (e) {
             e.stopPropagation();
             $('.cd-menu.abierto').removeClass('abierto');
             var clave = $(this).closest('.cd-item-pregunta').attr('data-clave');
@@ -1227,19 +1248,19 @@
         });
 
         // Botones del panel (subir, bajar, duplicar, eliminar)
-        $d.on('click', '#cdBtnSubir', function () { if (S.sel) { moverPregunta(S.sel, indiceDe(S.sel) - 1); } });
-        $d.on('click', '#cdBtnBajar', function () { if (S.sel) { moverPregunta(S.sel, indiceDe(S.sel) + 1); } });
-        $d.on('click', '#cdBtnDuplicar', function () { if (S.sel) { duplicarPregunta(S.sel); } });
-        $d.on('click', '#cdBtnEliminar', function () { if (S.sel) { eliminarPregunta(S.sel); } });
+        $d.on('click.cdEditor', '#cdBtnSubir', function () { if (S.sel) { moverPregunta(S.sel, indiceDe(S.sel) - 1); } });
+        $d.on('click.cdEditor', '#cdBtnBajar', function () { if (S.sel) { moverPregunta(S.sel, indiceDe(S.sel) + 1); } });
+        $d.on('click.cdEditor', '#cdBtnDuplicar', function () { if (S.sel) { duplicarPregunta(S.sel); } });
+        $d.on('click.cdEditor', '#cdBtnEliminar', function () { if (S.sel) { eliminarPregunta(S.sel); } });
 
         // Arrastrar y soltar (HTML5 nativo)
-        $d.on('dragstart', '.cd-item-pregunta', function (e) {
+        $d.on('dragstart.cdEditor', '.cd-item-pregunta', function (e) {
             S.dragClave = $(this).attr('data-clave');
             $(this).addClass('arrastrando');
             try { e.originalEvent.dataTransfer.setData('text', S.dragClave); } catch (ex) { /* IE */ }
             e.originalEvent.dataTransfer.effectAllowed = 'move';
         });
-        $d.on('dragover', '.cd-item-pregunta', function (e) {
+        $d.on('dragover.cdEditor', '.cd-item-pregunta', function (e) {
             if (!S.dragClave) { return; }
             e.preventDefault();
             var offset = $(this).offset().top;
@@ -1248,7 +1269,7 @@
             $('.cd-item-pregunta').removeClass('destino-arriba destino-abajo');
             $(this).addClass(arriba ? 'destino-arriba' : 'destino-abajo');
         });
-        $d.on('drop', '.cd-item-pregunta', function (e) {
+        $d.on('drop.cdEditor', '.cd-item-pregunta', function (e) {
             e.preventDefault();
             if (!S.dragClave) { return; }
             var destino = $(this).attr('data-clave');
@@ -1263,13 +1284,13 @@
             marcarSucio();
             refrescarTodoConstructor();
         });
-        $d.on('dragend', '.cd-item-pregunta', function () {
+        $d.on('dragend.cdEditor', '.cd-item-pregunta', function () {
             S.dragClave = null;
             $('.cd-item-pregunta').removeClass('arrastrando destino-arriba destino-abajo');
         });
 
         // ---------- Panel: campos simples ----------
-        $d.on('input change', '#cdPanelPregunta [data-campo]', function (e) {
+        $d.on('input.cdEditor change.cdEditor', '#cdPanelPregunta [data-campo]', function (e) {
             var p = actual();
             if (!p) { return; }
             var campo = $(this).attr('data-campo');
@@ -1300,7 +1321,7 @@
         });
 
         // Cambio de tipo
-        $d.on('change', '#cdPanelTipo', function () {
+        $d.on('change.cdEditor', '#cdPanelTipo', function () {
             var p = actual();
             var anterior = p.Tipo;
             p.Tipo = this.value;
@@ -1314,7 +1335,7 @@
         });
 
         // Opciones / filas / columnas
-        $d.on('input', '#cdPanelPregunta [data-lista]', function () {
+        $d.on('input.cdEditor', '#cdPanelPregunta [data-lista]', function () {
             var p = actual();
             var lista = $(this).attr('data-lista');
             var idx = parseInt($(this).attr('data-idx'), 10);
@@ -1324,7 +1345,7 @@
             renderLogica();
         });
 
-        $d.on('click', '#cdPanelPregunta [data-cd-op]', function (e) {
+        $d.on('click.cdEditor', '#cdPanelPregunta [data-cd-op]', function (e) {
             e.preventDefault();
             var p = actual();
             if (!p) { return; }
@@ -1397,17 +1418,17 @@
         });
 
         // Dependiente: nombre de nivel, selección múltiple, texto de opción
-        $d.on('input', '[data-dep-nivel-nombre]', function () {
+        $d.on('input.cdEditor', '[data-dep-nivel-nombre]', function () {
             actual().Niveles[parseInt($(this).attr('data-dep-nivel-nombre'), 10)].Nombre = this.value;
             marcarSucio();
             renderPreviewPregunta();
         });
-        $d.on('change', '[data-dep-nivel-multiple]', function () {
+        $d.on('change.cdEditor', '[data-dep-nivel-multiple]', function () {
             actual().Niveles[parseInt($(this).attr('data-dep-nivel-multiple'), 10)].PermitirMultiple = this.checked;
             marcarSucio();
             renderPreviewPregunta();
         });
-        $d.on('input', '[data-dep-opcion]', function () {
+        $d.on('input.cdEditor', '[data-dep-opcion]', function () {
             var o = util.buscar(actual().OpcionesDependientes, 'Clave', $(this).attr('data-dep-opcion'));
             if (o) { o.Texto = this.value; }
             marcarSucio();
@@ -1415,7 +1436,7 @@
         });
 
         // Reglas condicionales
-        $d.on('input change', '#cdPanelPregunta [data-regla-campo]', function (e) {
+        $d.on('input.cdEditor change.cdEditor', '#cdPanelPregunta [data-regla-campo]', function (e) {
             var p = actual();
             var r = p.Reglas[parseInt($(this).attr('data-regla'), 10)];
             var campo = $(this).attr('data-regla-campo');
@@ -1433,35 +1454,35 @@
         });
 
         // Recordar acordeones abiertos
-        $d.on('click', '#cdPanelPregunta .cd-acordeon-boton', function () {
+        $d.on('click.cdEditor', '#cdPanelPregunta .cd-acordeon-boton', function () {
             var $a = $(this).closest('.cd-acordeon');
             // el toggle lo hace cd.core.js; aquí solo se recuerda el estado
             setTimeout(function () { S.abiertos[$a.attr('data-cd-acordeon')] = $a.hasClass('abierto'); }, 0);
         });
 
         // Clic en el resumen de lógica -> abre la pregunta con su lógica
-        $d.on('click', '[data-cd-ir-logica]', function () {
+        $d.on('click.cdEditor', '[data-cd-ir-logica]', function () {
             S.abiertos.logica = true;
             S.sel = null;
             seleccionar($(this).attr('data-cd-ir-logica'));
         });
 
         // ---------- Configuración ----------
-        $d.on('change input', '#cdCfgFechaInicio', function () { S.encuesta.Publicacion.FechaInicio = this.value || null; marcarSucio(); });
-        $d.on('change input', '#cdCfgFechaCierre', function () { S.encuesta.Publicacion.FechaCierre = this.value || null; marcarSucio(); });
-        $d.on('change', '#cdCfgAnonima', function () { S.encuesta.Publicacion.Anonima = this.checked; marcarSucio(); });
-        $d.on('change', '#cdCfgAutenticado', function () {
+        $d.on('change.cdEditor input.cdEditor', '#cdCfgFechaInicio', function () { S.encuesta.Publicacion.FechaInicio = this.value || null; marcarSucio(); });
+        $d.on('change.cdEditor input.cdEditor', '#cdCfgFechaCierre', function () { S.encuesta.Publicacion.FechaCierre = this.value || null; marcarSucio(); });
+        $d.on('change.cdEditor', '#cdCfgAnonima', function () { S.encuesta.Publicacion.Anonima = this.checked; marcarSucio(); });
+        $d.on('change.cdEditor', '#cdCfgAutenticado', function () {
             S.encuesta.Publicacion.RequiereAutenticacion = this.checked;
             if (!this.checked && S.encuesta.Publicacion.RespuestaUnica) {
                 ui.toast('Sin usuario autenticado no se puede garantizar una respuesta por usuario.', 'info');
             }
             marcarSucio();
         });
-        $d.on('input', '#cdCfgMensajeInicial', function () { S.encuesta.Publicacion.MensajeInicial = this.value; marcarSucio(); });
-        $d.on('input', '#cdCfgMensajeFinal', function () { S.encuesta.Publicacion.MensajeFinal = this.value; marcarSucio(); });
-        $d.on('input', '#cdCfgDescripcion', function () { S.encuesta.Descripcion = this.value; marcarSucio(); });
-        $d.on('input', '#cdCfgPoblacion', function () { S.encuesta.PoblacionObjetivo = util.entero(this.value) || 0; marcarSucio(); });
-        $d.on('click', '[data-cd-respuestas]', function () {
+        $d.on('input.cdEditor', '#cdCfgMensajeInicial', function () { S.encuesta.Publicacion.MensajeInicial = this.value; marcarSucio(); });
+        $d.on('input.cdEditor', '#cdCfgMensajeFinal', function () { S.encuesta.Publicacion.MensajeFinal = this.value; marcarSucio(); });
+        $d.on('input.cdEditor', '#cdCfgDescripcion', function () { S.encuesta.Descripcion = this.value; marcarSucio(); });
+        $d.on('input.cdEditor', '#cdCfgPoblacion', function () { S.encuesta.PoblacionObjetivo = util.entero(this.value) || 0; marcarSucio(); });
+        $d.on('click.cdEditor', '[data-cd-respuestas]', function () {
             S.encuesta.Publicacion.RespuestaUnica = $(this).attr('data-cd-respuestas') === '1';
             $('[data-cd-respuestas]').removeClass('activo');
             $(this).addClass('activo');
@@ -1469,8 +1490,8 @@
         });
 
         // Segmentación
-        $d.on('change', '#cdSegTipo', sugerenciasSegmento);
-        $d.on('click', '#cdSegAgregar', function () {
+        $d.on('change.cdEditor', '#cdSegTipo', sugerenciasSegmento);
+        $d.on('click.cdEditor', '#cdSegAgregar', function () {
             var valor = $.trim($('#cdSegValor').val());
             if (!valor) { ui.toast('Escribe el valor del segmento.', 'error'); return; }
             S.encuesta.Segmentacion.push({ Clave: util.clave('s'), Tipo: $('#cdSegTipo').val(), Valor: valor });
@@ -1478,23 +1499,23 @@
             marcarSucio();
             renderSegmentacion();
         });
-        $d.on('keydown', '#cdSegValor', function (e) { if (e.which === 13) { e.preventDefault(); $('#cdSegAgregar').trigger('click'); } });
-        $d.on('click', '[data-cd-quitar-segmento]', function () {
+        $d.on('keydown.cdEditor', '#cdSegValor', function (e) { if (e.which === 13) { e.preventDefault(); $('#cdSegAgregar').trigger('click'); } });
+        $d.on('click.cdEditor', '[data-cd-quitar-segmento]', function () {
             S.encuesta.Segmentacion.splice(parseInt($(this).attr('data-cd-quitar-segmento'), 10), 1);
             marcarSucio();
             renderSegmentacion();
         });
 
         // ---------- Vista previa ----------
-        $d.on('click', '[data-cd-dispositivo]', function () {
+        $d.on('click.cdEditor', '[data-cd-dispositivo]', function () {
             S.dispositivo = $(this).attr('data-cd-dispositivo');
             renderPreview();
         });
-        $d.on('click', '#cdPreviewReiniciar', renderPreview);
+        $d.on('click.cdEditor', '#cdPreviewReiniciar', renderPreview);
 
         // ---------- Resultados ----------
-        $d.on('change', '#cdResVersion', function () { CD.Resultados.cargar(S.id, util.entero(this.value)); });
-        $d.on('click', '#cdResActualizar', function () { CD.Resultados.cargar(S.id, util.entero($('#cdResVersion').val())); });
+        $d.on('change.cdEditor', '#cdResVersion', function () { CD.Resultados.cargar(S.id, util.entero(this.value)); });
+        $d.on('click.cdEditor', '#cdResActualizar', function () { CD.Resultados.cargar(S.id, util.entero($('#cdResVersion').val())); });
     }
 
     // API pública del módulo

@@ -39,7 +39,7 @@ ModuloCapturaDinamico/
 │   ├── Controllers/CapturasDinamicasController.cs
 │   ├── Models/ModuloDinamico/               modelos y cálculo de resultados
 │   ├── DataAccess/CapturasDinamicas/        repositorios (SQL y mock) + Script_CapturaDinamica.sql
-│   ├── Views/CapturasDinamicas/             11 archivos: 3 vistas + 8 vistas parciales (_*.cshtml)
+│   ├── Views/CapturasDinamicas/             12 archivos: 3 vistas + 9 vistas parciales (_*.cshtml)
 │   ├── CSS/Page2026/CapturasDinamicas/
 │   ├── Scripts/CapturasDinamicas/
 │   └── LEEME_CapturasDinamicas.md           referencia técnica del módulo
@@ -167,7 +167,7 @@ Copia el contenido de **`Solution_Radar/`** sobre tu solución real, respetando 
 | `Controllers/CapturasDinamicasController.cs` | `Controllers/` |
 | `Models/ModuloDinamico/*` | `Models/ModuloDinamico/` |
 | `DataAccess/CapturasDinamicas/*.cs` (3 archivos) | `DataAccess/CapturasDinamicas/` |
-| `Views/CapturasDinamicas/*` (**11 archivos**: 3 vistas + 8 parciales) | `Views/CapturasDinamicas/` |
+| `Views/CapturasDinamicas/*` (**12 archivos**: 3 vistas + 9 parciales) | `Views/CapturasDinamicas/` |
 | `CSS/Page2026/CapturasDinamicas/*` | `CSS/Page2026/CapturasDinamicas/` |
 | `Scripts/CapturasDinamicas/*` | `Scripts/CapturasDinamicas/` |
 
@@ -207,6 +207,14 @@ Producción, el módulo cambia también. **No** agregues `CapturaDinamica:Cargar
    - **Error "Invalid object name ..."** → faltan tablas: revisa el paso 3.
 
 Las vistas usan `Layout = "~/Views/Shared/_LayoutRadar2026.cshtml"`, el que ya existe en el portal.
+
+### Paso 6 — Mostrarlo en el portal
+
+- **Página completa:** un enlace del menú a `/CapturasDinamicas/Administrador` (administrador) o
+  `/CapturasDinamicas/Captura/{id}` (quien responde).
+- **Dentro de una pantalla, por AJAX:** usa las acciones `AdministradorParcial`, `EditorParcial/{id}` y
+  `CapturaParcial/{id}`. El código completo para copiar está en
+  `Solution_Radar/LEEME_CapturasDinamicas.md`, sección **3. Cómo llamar el módulo desde el portal**.
 
 ### Configurar el calendario de Outlook (preguntas de fecha)
 
@@ -317,6 +325,8 @@ en las tablas `portal.capturadinamica_*`.
 | `5205853` | Script SQL que se puede ejecutar varias veces | Volver a ejecutar el script en SSMS; no se copia código |
 | `ede0525` | Manuales actualizados | Nada |
 | `14f9f42` | **Calendario de Outlook en fechas + campo llave** | 1) Ejecutar de nuevo el script en SSMS (agrega 5 columnas a `tp_pregunta`, sin borrar datos). 2) Copiar **todo** `Solution_Radar/` excepto el `.sql` (cambió el controller, modelos, repositorios, vistas, CSS y JS). No hay archivos nuevos: no hay que incluir nada en el proyecto. |
+| `18c15c6` | Vistas parciales por AJAX (sin `[ChildActionOnly]`) y eventos sin duplicar | Copiar el controller, `cd.core.js`, `cd.listado.js`, `Editor.cshtml`, `_CapturaFormulario.cshtml`, `_ListadoEncuestas.cshtml` |
+| *(siguiente)* | **Constructor por AJAX**: acción `EditorParcial` y vista nueva `_Editor.cshtml` | Copiar el controller, `cd.editor.js`, `cd.listado.js` y todas las vistas de `Views/CapturasDinamicas`. **Incluir en el proyecto** el archivo nuevo `_Editor.cshtml`. |
 
 Para ver qué archivos cambiaron entre tu versión y la actual: `git log --stat` o la pestaña *Commits* en GitHub.
 

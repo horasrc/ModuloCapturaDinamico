@@ -1,0 +1,65 @@
+﻿@*
+    =====================================================================
+    Vista parcial: CONSTRUCTOR DE ENCUESTAS completo (sin layout).
+    Requiere ViewBag.IdEncuesta; opcional ViewBag.Pestana
+    ('constructor' | 'configuracion' | 'preview' | 'resultados').
+
+    La usan:
+      Editor.cshtml                        página completa con _LayoutRadar2026
+      /CapturasDinamicas/EditorParcial/5   para cargarla por AJAX
+          $('#contenedor').load('/CapturasDinamicas/EditorParcial/5');
+          $('#contenedor').load('/CapturasDinamicas/EditorParcial/5?pestana=resultados');
+
+    Incluye su CSS y sus scripts. Se puede cargar varias veces: los eventos
+    usan namespaces (.cdGlobal / .cdEditor) y no se duplican.
+
+    Estructura (cada bloque es otra vista parcial):
+      _EditorEncabezado     nombre, estatus, versión, Vista previa / Guardar / Publicar, pestañas
+      _EditorConstructor    [Lista de preguntas | Panel de edición | Vista previa + Tipos]
+      _EditorConfiguracion  publicación + segmentación
+      _EditorVistaPrevia    Desktop / Tablet / Móvil
+      _EditorResultados     indicadores y gráficas por pregunta
+      _EditorModales        tipos de pregunta, nombre, confirmación, historial de versiones
+    =====================================================================
+*@
+<link href="@Url.Content("~/CSS/Page2026/CapturasDinamicas/CapturasDinamicas.css")?v=1.1.2" rel="stylesheet" />
+
+<div class="cd-modulo" id="cdEditor">
+
+    @Html.Partial("_EditorEncabezado")
+
+    <div class="cd-tab-panel" id="cdTab-constructor">
+        @Html.Partial("_EditorConstructor")
+    </div>
+
+    <div class="cd-tab-panel cd-oculto" id="cdTab-configuracion">
+        @Html.Partial("_EditorConfiguracion")
+    </div>
+
+    <div class="cd-tab-panel cd-oculto" id="cdTab-preview">
+        @Html.Partial("_EditorVistaPrevia")
+    </div>
+
+    <div class="cd-tab-panel cd-oculto" id="cdTab-resultados">
+        @Html.Partial("_EditorResultados")
+    </div>
+
+    @Html.Partial("_EditorModales")
+</div>
+
+<script src="@Url.Content("~/Scripts/CapturasDinamicas/cd.core.js")?v=1.1.2"></script>
+<script src="@Url.Content("~/Scripts/CapturasDinamicas/cd.api.js")?v=1.1.2"></script>
+<script src="@Url.Content("~/Scripts/CapturasDinamicas/cd.renderer.js")?v=1.1.2"></script>
+<script src="@Url.Content("~/Scripts/CapturasDinamicas/cd.resultados.js")?v=1.1.2"></script>
+<script src="@Url.Content("~/Scripts/CapturasDinamicas/cd.editor.js")?v=1.1.2"></script>
+<script>
+    CD.config.urls.obtenerEncuesta = '@Url.Action("ObtenerEncuesta", "CapturasDinamicas")';
+    CD.config.urls.guardarBorrador = '@Url.Action("GuardarBorrador", "CapturasDinamicas")';
+    CD.config.urls.publicarEncuesta = '@Url.Action("PublicarEncuesta", "CapturasDinamicas")';
+    CD.config.urls.cambiarEstatus = '@Url.Action("CambiarEstatus", "CapturasDinamicas")';
+    CD.config.urls.obtenerResultados = '@Url.Action("ObtenerResultados", "CapturasDinamicas")';
+    CD.config.urls.captura = '@Url.Action("Captura", "CapturasDinamicas", new { id = "" })';
+    CD.config.urls.buscarPorLlave = '@Url.Action("BuscarPorLlave", "CapturasDinamicas")';
+    CD.config.urls.calendario = '@Url.Action("DescargarCalendario", "CapturasDinamicas")';
+    jQuery(function () { CD.Editor.init({ idEncuesta: @ViewBag.IdEncuesta, pestana: '@(ViewBag.Pestana ?? "")' }); });
+</script>

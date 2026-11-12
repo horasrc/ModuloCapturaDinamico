@@ -17,18 +17,20 @@ Solution_Radar
 │       ├── ICapturaDinamicaRepositorio.cs   (contrato de datos)
 │       ├── CapturaDinamicaRepositorioSql.cs (SQL Server con ADO.NET)
 │       ├── CapturaDinamicaRepositorioMock.cs(datos de ejemplo en memoria)
-│       └── Script_CapturaDinamica.sql       (tablas portal.capturadinamica_*; se ejecuta en SSMS)
+│       ├── Script_CapturaDinamica.sql       (tablas portal.capturadinamica_*; se ejecuta en SSMS, no se copia)
+│       └── ModeloEntidadRelacion.md         (diagrama entidad-relación; documentación, no se copia)
 ├── Views
-│   └── CapturasDinamicas                    (11 archivos: copiar TODOS)
+│   └── CapturasDinamicas                    (12 archivos: copiar TODOS)
 │       ├── Administrador.cshtml             vista principal: listado de encuestas
 │       ├── _ListadoEncuestas.cshtml           parcial que usa Administrador
-│       ├── Editor.cshtml                    vista principal: constructor de la encuesta
-│       ├── _EditorEncabezado.cshtml           parcial que usa Editor (nombre, estatus, botones, pestañas)
-│       ├── _EditorConstructor.cshtml          parcial que usa Editor (lista, panel, tipos de pregunta)
-│       ├── _EditorConfiguracion.cshtml        parcial que usa Editor (publicación y segmentación)
-│       ├── _EditorVistaPrevia.cshtml          parcial que usa Editor (Desktop / Tablet / Móvil)
-│       ├── _EditorResultados.cshtml           parcial que usa Editor (resultados)
-│       ├── _EditorModales.cshtml              parcial que usa Editor (modales e historial de versiones)
+│       ├── Editor.cshtml                    vista principal: constructor (solo incluye _Editor con el layout)
+│       ├── _Editor.cshtml                     parcial con TODO el constructor (también se carga por AJAX)
+│       ├── _EditorEncabezado.cshtml             parcial que usa _Editor (nombre, estatus, botones, pestañas)
+│       ├── _EditorConstructor.cshtml            parcial que usa _Editor (lista, panel, tipos de pregunta)
+│       ├── _EditorConfiguracion.cshtml          parcial que usa _Editor (publicación y segmentación)
+│       ├── _EditorVistaPrevia.cshtml            parcial que usa _Editor (Desktop / Tablet / Móvil)
+│       ├── _EditorResultados.cshtml             parcial que usa _Editor (resultados)
+│       ├── _EditorModales.cshtml                parcial que usa _Editor (modales e historial de versiones)
 │       ├── Captura.cshtml                   vista principal: pantalla del usuario final
 │       └── _CapturaFormulario.cshtml          parcial que usa Captura
 ├── CSS
@@ -53,50 +55,118 @@ Todos los archivos están en UTF-8 con firma (BOM) para que los acentos se vean 
 
 ## 2. URLs
 
+### Páginas completas (con `_LayoutRadar2026`)
+
 | Pantalla | URL |
 |---|---|
 | Administrador (listado) | `/CapturasDinamicas/Administrador` |
 | Constructor | `/CapturasDinamicas/Editor/{id}` (`#resultados` abre resultados) |
 | Captura (usuario final) | `/CapturasDinamicas/Captura/{id}` |
 
-### Vistas parciales (sin layout) para incrustar en otra pantalla
+### Vistas parciales (sin layout, para cargarlas por AJAX)
 
 | Acción | Devuelve |
 |---|---|
 | `/CapturasDinamicas/AdministradorParcial` | `_ListadoEncuestas` (listado de encuestas) |
+| `/CapturasDinamicas/EditorParcial/{id}` | `_Editor` (constructor completo). Opcional `?pestana=constructor\|configuracion\|preview\|resultados` |
 | `/CapturasDinamicas/CapturaParcial/{id}` | `_CapturaFormulario` (encuesta para responder) |
 
-Se pueden pedir **por AJAX** (no tienen `[ChildActionOnly]`):
+Cada parcial trae su `<link>` de CSS y sus `<script>`, y se puede cargar varias veces: los eventos usan
+*namespaces* (`.cdGlobal`, `.cdListado`, `.cdEditor`) y se quitan antes de registrarse, así que no se duplican.
 
-```javascript
-// Usar .load(url) SIN selector: con selector ("url #id") jQuery no ejecuta los <script> de la parcial
-$('#contenedor').load('/CapturasDinamicas/CapturaParcial/1');
+## 3. Cómo llamar el módulo desde el portal
 
-// o bien
-$.ajax({ url: '/CapturasDinamicas/AdministradorParcial', cache: false })
-    .done(function (html) { $('#contenedor').html(html); });
+### Lo que necesita la página del portal
+
+La página donde se muestre el módulo (normalmente cualquiera que use `_LayoutRadar2026`) debe tener,
+**antes** de insertar la parcial:
+
+| Requisito | En el portal lo da |
+|---|---|
+| jQuery 3.x | `_LayoutRadar2026` |
+| Bootstrap 5 JS (para modales y offcanvas) | `_LayoutRadar2026` |
+| Bootstrap CSS y Bootstrap Icons | `_LayoutRadar2026` (`~/Content/bootstrap.css`, `~/bootstrap-icons/...`) |
+| Objeto global `Token` (usuario) | `~/Scripts/Token/Page.js`. Se lee al guardar y al responder, no al cargar |
+
+### Opción A: abrir la página completa (lo más simple)
+
+Un enlace en el menú del portal; la página ya trae el layout:
+
+```html
+<a href="@Url.Action("Administrador", "CapturasDinamicas")">Captura dinámica</a>                 <!-- administrador -->
+<a href="@Url.Action("Captura", "CapturasDinamicas", new { id = 4 })">Seguimiento de visitas</a>  <!-- ejecutivos -->
 ```
 
-o desde una vista: `@Html.Action("CapturaParcial", "CapturasDinamicas", new { id = 1 })`.
+### Opción B: cargarlo por AJAX dentro de una pantalla del portal
 
-Notas:
-- Cada parcial trae su `<link>` de CSS y sus `<script>`; jQuery los ejecuta al insertarla.
-- Se pueden cargar varias veces: los eventos usan *namespaces* (`.cdGlobal`, `.cdListado`) y se
-  quitan antes de registrarse, así que no se duplican.
-- Usa la URL con `@Url.Action(...)` si el sitio corre en un directorio virtual.
-- El constructor (`Editor`) es una vista completa: desde el listado se abre navegando a `/CapturasDinamicas/Editor/{id}`.
+En la vista `.cshtml` del portal (por ejemplo, una sección de `Views/Radar/...`):
 
-## 3. Notas sobre `_LayoutRadar2026`
+```html
+<div id="cdContenedor"></div>
 
-- El layout carga **jQuery dos veces** y **Bootstrap dos veces** (bundle 5.3.2 por CDN y
-  `~/Scripts/bootstrap.js` 5.2.3 sin Popper). Por eso el módulo **no usa `data-bs-toggle` /
-  `data-bs-dismiss`**: pestañas, acordeones y menús son propios, y modales/offcanvas se abren
-  con la API JS (`CD.ui.modal`, `CD.ui.offcanvas`). Recomendación: dejar una sola copia de cada uno.
+<script>
+    // 1) URLs generadas por Razor (funciona aunque el sitio esté en un directorio virtual)
+    var cdUrls = {
+        listado: '@Url.Action("AdministradorParcial", "CapturasDinamicas")',
+        editor:  '@Url.Action("EditorParcial", "CapturasDinamicas")',
+        captura: '@Url.Action("CapturaParcial", "CapturasDinamicas")'
+    };
+
+    // 2) Navegación interna del módulo (opcional): sin esto, "Editar" y "< Encuestas" cambian de página
+    window.CD = window.CD || {};
+    CD.config = CD.config || { urls: {} };
+    CD.config.abrirEditor = function (idEncuesta, pestana) {      // pestana: null o 'resultados'
+        cdCargar(cdUrls.editor + '/' + idEncuesta + (pestana ? '?pestana=' + pestana : ''));
+    };
+    CD.config.abrirListado = function () {
+        cdCargar(cdUrls.listado);
+    };
+
+    // 3) Carga una parcial en el contenedor
+    function cdCargar(url) {
+        $.ajax({ url: url, type: 'GET', cache: false })
+            .done(function (html) { $('#cdContenedor').html(html); })     // .html() de jQuery: ejecuta los <script>
+            .fail(function () { $('#cdContenedor').html('<div class="alert alert-danger">No se pudo cargar el módulo.</div>'); });
+    }
+
+    // 4) Qué mostrar al entrar
+    $(function () {
+        cdCargar(cdUrls.listado);                     // administrador: listado de encuestas
+        // cdCargar(cdUrls.captura + '/4');           // ejecutivos: responder la encuesta 4
+        // cdCargar(cdUrls.editor + '/1');            // abrir directo el constructor de la encuesta 1
+    });
+</script>
+```
+
+Reglas importantes:
+
+- **Inserta el HTML con jQuery** (`.html()`, `.load(url)` o `.append()`). Si se inserta con
+  `element.innerHTML = html`, el navegador **no ejecuta** los `<script>` de la parcial y el módulo no arranca.
+- **No uses `.load('url #selector')`**: con selector, jQuery tampoco ejecuta los scripts.
+- **`@Url.Action` solo funciona dentro de un `.cshtml`**. Si tu código está en un `.js`, pon las URLs en la
+  vista (como `cdUrls`) o escribe la ruta completa (`/CapturasDinamicas/AdministradorParcial`), recordando
+  el directorio virtual si existe.
+- **Usa `cache: false`** para que IE no guarde en caché la respuesta del GET.
+- **Si el portal tiene su propio helper de AJAX** (`ApiManager`, `MainAjaxSolution`...), sirve igual mientras
+  pida la URL por GET y ponga el HTML con jQuery (`$('#cdContenedor').html(respuesta)`).
+- `CD.config.abrirEditor` / `abrirListado` se consultan al hacer clic, así que se pueden definir antes o
+  después de cargar la parcial. Ctrl + clic en "Editar" sigue abriendo la página completa en otra pestaña.
+- Desde otra vista Razor (sin AJAX) también se puede usar: `@Html.Action("CapturaParcial", "CapturasDinamicas", new { id = 4 })`.
+
+## 4. Notas sobre `_LayoutRadar2026`
+
+- El layout del portal carga **jQuery dos veces** (CDN antes de `@RenderBody()` y `~/Scripts/jquery-3.7.1.min.js`
+  después) y **Bootstrap dos veces** (bundle 5.3.2 por CDN y `~/Scripts/bootstrap.js` 5.2.3 sin Popper).
+  El módulo funciona igual con o sin esas cargas repetidas: no usa `data-bs-toggle` / `data-bs-dismiss`;
+  pestañas, acordeones y menús son propios, y modales/offcanvas se abren con la API JS (`CD.ui.modal`, `CD.ui.offcanvas`).
+- **Recomendación** (afecta a todo el portal; probar primero en Desarrollo): dejar una sola copia, antes de
+  `@RenderBody()`, con `~/Scripts/jquery-3.7.1.min.js` y `~/Scripts/bootstrap.bundle.min.js`, y comentar las
+  cargas repetidas de después del `@RenderBody()`. El layout del proyecto de prueba ya está así.
 - El usuario se toma del objeto global `Token` (`NumEmpleado`, `NombreEmpleado`, `Puesto`, `Cencos`).
 - JavaScript en ES5 (sin flechas, `let/const`, template strings ni `Promise`).
 - C# compatible con C# 5 (sin interpolación `$""`, `?.` ni `nameof`).
 
-## 4. Funciones especiales
+## 5. Funciones especiales
 
 ### Fecha → calendario de Outlook
 - Configuración por pregunta de fecha: `PermitirCalendario`, `CalendarioPedirHora`, `CalendarioTitulo`, `CalendarioDuracion`.
@@ -115,15 +185,17 @@ Notas:
 - Con campo llave no aplica "una respuesta por usuario" y `CapturaDinamicaResultadosServicio` cuenta solo
   la última captura de cada valor.
 
-## 5. Base de datos
+## 6. Base de datos
 
 `CapturaDinamicaRepositorioSql.cs` implementa el repositorio con ADO.NET contra las tablas
-`portal.capturadinamica_*`, con las mismas reglas de negocio que el mock:
+`portal.capturadinamica_*`, con las mismas reglas de negocio que el mock. El diagrama y la explicación
+del modelo están en `DataAccess/CapturasDinamicas/ModeloEntidadRelacion.md`.
 
 - Una versión publicada/cerrada/archivada **con respuestas no se sobrescribe**: se actualiza el
   borrador existente o se crea una versión nueva.
 - Al publicar, la versión publicada anterior pasa a **Archivada** (histórico).
-- **Una respuesta por usuario** cuando la versión lo indica.
+- **Una respuesta por usuario** cuando la versión lo indica, excepto en encuestas con campo llave
+  (ahí se permiten varias capturas).
 - Cada guardado se hace en una transacción.
 
 ### Elección del repositorio (constructor del controller)
