@@ -326,7 +326,7 @@ en las tablas `portal.capturadinamica_*`.
 | `ede0525` | Manuales actualizados | Nada |
 | `14f9f42` | **Calendario de Outlook en fechas + campo llave** | 1) Ejecutar de nuevo el script en SSMS (agrega 5 columnas a `tp_pregunta`, sin borrar datos). 2) Copiar **todo** `Solution_Radar/` excepto el `.sql` (cambió el controller, modelos, repositorios, vistas, CSS y JS). No hay archivos nuevos: no hay que incluir nada en el proyecto. |
 | `18c15c6` | Vistas parciales por AJAX (sin `[ChildActionOnly]`) y eventos sin duplicar | Copiar el controller, `cd.core.js`, `cd.listado.js`, `Editor.cshtml`, `_CapturaFormulario.cshtml`, `_ListadoEncuestas.cshtml` |
-| *(siguiente)* | **Constructor por AJAX**: acción `EditorParcial` y vista nueva `_Editor.cshtml` | Copiar el controller, `cd.editor.js`, `cd.listado.js` y todas las vistas de `Views/CapturasDinamicas`. **Incluir en el proyecto** el archivo nuevo `_Editor.cshtml`. |
+| `5aa7389` | **Constructor por AJAX** (+ modelo entidad-relación y guía de integración): acción `EditorParcial` y vista nueva `_Editor.cshtml` | Copiar el controller, `cd.editor.js`, `cd.listado.js` y todas las vistas de `Views/CapturasDinamicas`. **Incluir en el proyecto** el archivo nuevo `_Editor.cshtml`. |
 
 Para ver qué archivos cambiaron entre tu versión y la actual: `git log --stat` o la pestaña *Commits* en GitHub.
 
