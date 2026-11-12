@@ -94,23 +94,29 @@
             .always(function () { $('#cdBtnCrearEncuesta').prop('disabled', false); });
     }
 
+    /**
+     * Eventos con namespace ".cdListado": se quitan antes de registrarse para que,
+     * si la parcial _ListadoEncuestas se carga varias veces por AJAX, no se dupliquen
+     * (por ejemplo, que "Crear" no cree dos encuestas).
+     */
     function enlazarEventos() {
         var $d = $(document);
-        $d.on('input', '#cdBuscarEncuesta', function () {
+        $d.off('.cdListado');
+        $d.on('input.cdListado', '#cdBuscarEncuesta', function () {
             filtro.texto = this.value.toLowerCase();
             render();
         });
-        $d.on('click', '[data-cd-filtro]', function () {
+        $d.on('click.cdListado', '[data-cd-filtro]', function () {
             filtro.estatus = $(this).attr('data-cd-filtro');
             render();
         });
-        $d.on('click', '#cdBtnNuevaEncuesta', function () {
+        $d.on('click.cdListado', '#cdBtnNuevaEncuesta', function () {
             $('#cdNuevaNombre, #cdNuevaDescripcion').val('');
             ui.modal('cdModalNuevaEncuesta', 'show');
             setTimeout(function () { $('#cdNuevaNombre').trigger('focus'); }, 300);
         });
-        $d.on('click', '#cdBtnCrearEncuesta', crear);
-        $d.on('keydown', '#cdNuevaNombre', function (e) { if (e.which === 13) { crear(); } });
+        $d.on('click.cdListado', '#cdBtnCrearEncuesta', crear);
+        $d.on('keydown.cdListado', '#cdNuevaNombre', function (e) { if (e.which === 13) { crear(); } });
     }
 
     CD.Listado = { init: init, recargar: cargar };

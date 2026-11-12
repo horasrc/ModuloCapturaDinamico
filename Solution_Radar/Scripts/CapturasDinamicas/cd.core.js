@@ -263,13 +263,17 @@ window.CD = CD;
     CD.ui = ui;
 
     // ------------------------------------------------------------------
-    //  COMPORTAMIENTOS GLOBALES (delegados, se registran una sola vez)
+    //  COMPORTAMIENTOS GLOBALES (delegados en document)
+    //  Usan el namespace ".cdGlobal" y se quitan antes de registrarse:
+    //  si la vista parcial se carga varias veces por AJAX (y este archivo
+    //  se vuelve a ejecutar), los eventos NO se duplican.
     // ------------------------------------------------------------------
     jQuery(function () {
         var $doc = jQuery(document);
+        $doc.off('.cdGlobal');
 
         // Menús desplegables propios: <div class="cd-menu"><button data-cd-menu>...</button><div class="cd-menu-lista">...</div></div>
-        $doc.on('click', '[data-cd-menu]', function (e) {
+        $doc.on('click.cdGlobal', '[data-cd-menu]', function (e) {
             e.preventDefault();
             e.stopPropagation();
             var $menu = jQuery(this).closest('.cd-menu');
@@ -277,22 +281,22 @@ window.CD = CD;
             jQuery('.cd-menu.abierto').removeClass('abierto');
             if (!abierto) { $menu.addClass('abierto'); }
         });
-        $doc.on('click', function () {
+        $doc.on('click.cdGlobal', function () {
             jQuery('.cd-menu.abierto').removeClass('abierto');
         });
 
         // Acordeones propios: <div class="cd-acordeon"><button class="cd-acordeon-boton">...</button><div class="cd-acordeon-cuerpo">
-        $doc.on('click', '.cd-acordeon-boton', function (e) {
+        $doc.on('click.cdGlobal', '.cd-acordeon-boton', function (e) {
             e.preventDefault();
             jQuery(this).closest('.cd-acordeon').toggleClass('abierto');
         });
 
         // Botones que cierran modales / offcanvas sin data-bs-dismiss
-        $doc.on('click', '[data-cd-cerrar-modal]', function (e) {
+        $doc.on('click.cdGlobal', '[data-cd-cerrar-modal]', function (e) {
             e.preventDefault();
             ui.modal(jQuery(this).closest('.modal').attr('id'), 'hide');
         });
-        $doc.on('click', '[data-cd-cerrar-offcanvas]', function (e) {
+        $doc.on('click.cdGlobal', '[data-cd-cerrar-offcanvas]', function (e) {
             e.preventDefault();
             ui.offcanvas(jQuery(this).closest('.offcanvas').attr('id'), 'hide');
         });

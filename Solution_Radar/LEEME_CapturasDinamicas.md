@@ -59,8 +59,32 @@ Todos los archivos están en UTF-8 con firma (BOM) para que los acentos se vean 
 | Constructor | `/CapturasDinamicas/Editor/{id}` (`#resultados` abre resultados) |
 | Captura (usuario final) | `/CapturasDinamicas/Captura/{id}` |
 
-Para incrustar en otra pantalla: `@Html.Action("AdministradorParcial", "CapturasDinamicas")`
-o `@Html.Action("CapturaParcial", "CapturasDinamicas", new { id = 1 })`.
+### Vistas parciales (sin layout) para incrustar en otra pantalla
+
+| Acción | Devuelve |
+|---|---|
+| `/CapturasDinamicas/AdministradorParcial` | `_ListadoEncuestas` (listado de encuestas) |
+| `/CapturasDinamicas/CapturaParcial/{id}` | `_CapturaFormulario` (encuesta para responder) |
+
+Se pueden pedir **por AJAX** (no tienen `[ChildActionOnly]`):
+
+```javascript
+// Usar .load(url) SIN selector: con selector ("url #id") jQuery no ejecuta los <script> de la parcial
+$('#contenedor').load('/CapturasDinamicas/CapturaParcial/1');
+
+// o bien
+$.ajax({ url: '/CapturasDinamicas/AdministradorParcial', cache: false })
+    .done(function (html) { $('#contenedor').html(html); });
+```
+
+o desde una vista: `@Html.Action("CapturaParcial", "CapturasDinamicas", new { id = 1 })`.
+
+Notas:
+- Cada parcial trae su `<link>` de CSS y sus `<script>`; jQuery los ejecuta al insertarla.
+- Se pueden cargar varias veces: los eventos usan *namespaces* (`.cdGlobal`, `.cdListado`) y se
+  quitan antes de registrarse, así que no se duplican.
+- Usa la URL con `@Url.Action(...)` si el sitio corre en un directorio virtual.
+- El constructor (`Editor`) es una vista completa: desde el listado se abre navegando a `/CapturasDinamicas/Editor/{id}`.
 
 ## 3. Notas sobre `_LayoutRadar2026`
 

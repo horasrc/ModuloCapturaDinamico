@@ -85,15 +85,16 @@ namespace Solution_Radar.Controllers
             return View();
         }
 
-        // Versiones parciales por si se quieren incrustar en otra pantalla del portal
-        // (por ejemplo con @Html.Action("AdministradorParcial", "CapturasDinamicas")).
-        [ChildActionOnly]
+        // Versiones parciales (sin layout) para incrustar en otra pantalla del portal.
+        // Se pueden pedir por AJAX:
+        //     $('#contenedor').load('/CapturasDinamicas/AdministradorParcial');
+        //     $('#contenedor').load('/CapturasDinamicas/CapturaParcial/1');
+        // o desde una vista con @Html.Action("AdministradorParcial", "CapturasDinamicas").
         public ActionResult AdministradorParcial()
         {
             return PartialView("_ListadoEncuestas");
         }
 
-        [ChildActionOnly]
         public ActionResult CapturaParcial(int id)
         {
             ViewBag.IdEncuesta = id;

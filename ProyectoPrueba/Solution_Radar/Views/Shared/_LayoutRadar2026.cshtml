@@ -2,10 +2,15 @@
     LAYOUT DE PRUEBA que imita a _LayoutRadar2026 del portal.
     NO copiar a la solución real (allá ya existe el layout original).
 
-    Igual que el layout real:
-      - jQuery 3.7.1 + Bootstrap 5.3.2 bundle ANTES del RenderBody.
-      - Después del RenderBody se vuelven a cargar jQuery y bootstrap.js (sin Popper).
-    Así la prueba refleja las mismas condiciones del portal.
+    VERSIÓN LIMPIA (recomendada para el portal):
+      - UNA sola copia de jQuery 3.7.1 y UNA de Bootstrap (bundle = incluye Popper),
+        ambas ANTES de @RenderBody() para que los scripts de las vistas ya las encuentren.
+      - Bootstrap JS 5.2.3, la misma versión que el CSS.
+    En el portal usar las copias locales:
+        <script src="~/Scripts/jquery-3.7.1.min.js"></script>
+        <script src="~/Scripts/bootstrap.bundle.min.js"></script>
+    y quitar las cargas repetidas de después del RenderBody
+    (~/Scripts/jquery-3.7.1.min.js y ~/Scripts/bootstrap.js).
 *@
 <!DOCTYPE html>
 <html>
@@ -27,10 +32,10 @@
         </span>
     </header>
 
-    <!-- jQuery 3.7.1 -->
+    <!-- jQuery 3.7.1 (única copia) -->
     <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
-    <!-- Bootstrap 5.3.2 -->
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+    <!-- Bootstrap 5.2.3 bundle con Popper (única copia, misma versión que el CSS) -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.2.3/dist/js/bootstrap.bundle.min.js"></script>
 
     <!-- Objeto Token simulado (en el portal lo crea Scripts/Token/Page.js) -->
     <script>
@@ -48,8 +53,8 @@
         @RenderBody()
     </div>
 
-    <!-- Segunda carga, como en el layout real -->
-    <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.2.3/dist/js/bootstrap.min.js"></script>
+    @* Sin cargas repetidas de jQuery / Bootstrap después del RenderBody.
+       Aquí irían los demás scripts del portal (Kendo, Core, Token, General...),
+       que usan la misma copia de jQuery cargada arriba. *@
 </body>
 </html>
